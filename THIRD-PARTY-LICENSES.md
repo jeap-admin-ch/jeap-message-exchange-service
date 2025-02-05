@@ -359,14 +359,12 @@ Eclipse Distribution License - v 1.0
 -------------------------------
 
  * Jakarta Activation API - [jakarta.activation:jakarta.activation-api](https://github.com/jakartaee/jaf-api)
- * Jakarta Persistence API - [jakarta.persistence:jakarta.persistence-api](https://github.com/eclipse-ee4j/jpa-api)
  * Jakarta XML Binding API - [jakarta.xml.bind:jakarta.xml.bind-api](https://github.com/jakartaee/jaxb-api/jakarta.xml.bind-api)
 
 Eclipse Public License v2.0
 -------------------------------
 
  * Jakarta Annotations API - [jakarta.annotation:jakarta.annotation-api](https://projects.eclipse.org/projects/ee4j.ca)
- * Jakarta Persistence API - [jakarta.persistence:jakarta.persistence-api](https://github.com/eclipse-ee4j/jpa-api)
  * AspectJ Weaver - [org.aspectj:aspectjweaver](https://www.eclipse.org/aspectj/)
  * JUnit Jupiter (Aggregator) - [org.junit.jupiter:junit-jupiter](https://junit.org/junit5/)
  * JUnit Jupiter API - [org.junit.jupiter:junit-jupiter-api](https://junit.org/junit5/)
