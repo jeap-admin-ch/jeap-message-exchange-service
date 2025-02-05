@@ -5,16 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.12.0] - 2025-02-05
-
-### Changed
-
-- Prepare repository for Open Source distribution
-
 ## [2.11.0] - 2025-01-31
 
 ### Added
 
+- Prepare repository for Open Source distribution
 - Added partner API v3 with the following changes compared to v2 (note that v2 is unchanged)
 - The messages list response now includes the following optional elements:
   - `<groupId>`
