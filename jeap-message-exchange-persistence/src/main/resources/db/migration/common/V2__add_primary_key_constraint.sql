@@ -1,0 +1,1 @@
+ALTER TABLE b2bhub_db_table ADD CONSTRAINT pk_sequenceId PRIMARY KEY ("sequenceId");

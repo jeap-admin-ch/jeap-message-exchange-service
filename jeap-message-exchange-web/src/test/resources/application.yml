@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: test
+  flyway:
+    locations: classpath:db/migration/common
+
+server:
+  servlet:
+    context-path: /
+
+jeap:
+  messageexchange:
+    api:
+      privileged-business-partner-id: "the-privileged-bp-id"
+  security:
+    oauth2:
+      resourceserver:
+        authorization-server:
+          issuer: "http://localhost:8080/test"
+        system-name: "junit"
+  monitor:
+    prometheus:
+      user: prometheus
+      password: "{noop}test"
+
+logging:
+  level:
+    ch.admin.bit.jeap.messageexchange: DEBUG
+    org: WARN
+    kafka: WARN
+    com.zaxxer: WARN
+    state.change.logger: ERROR
+    ch.admin.bit.jeap.messaging.kafka.serde.confluent.config: WARN
+    io.confluent.kafka.serializers: WARN

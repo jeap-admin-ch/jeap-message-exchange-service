@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: junit
+
+logging:
+  level:
+    ch.admin.bit.jeap.messageexchange: DEBUG
+    org: WARN
+    kafka: ERROR
+    com.zaxxer: WARN
+    state.change.logger: ERROR
+    ch.admin.bit.jeap.messaging.kafka.serde.confluent.config: WARN
+    io.confluent.kafka.serializers: WARN
