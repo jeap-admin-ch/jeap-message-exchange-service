@@ -17,10 +17,6 @@ in [Keep a Changelog](http://keepachangelog.com/)
 
 Change log is available at [CHANGELOG.md](./CHANGELOG.md)
 
-## Documentation
-
-Check [jEAP Message Exchange Service](https://confluence.bit.admin.ch/display/JEAP/Message+Exchange+Service) for further documentation
-
 ## Note
 
 This repository is part of the open source distribution of jEAP. See [github.com/jeap-admin-ch/jeap](https://github.com/jeap-admin-ch/jeap)
