@@ -5,7 +5,7 @@ Third-Party Dependency Licenses
 Third-party dependencies grouped by their license type (see [pom.xml](/pom.xml) for version information):
 
 
-Apache License, Version 2.0
+Apache License Version 2.0
 -------------------------------
 
  * jeap-crypto-core - [ch.admin.bit.jeap:jeap-crypto-core](https://github.com/jeap-admin-ch/jeap-crypto/tree/main/jeap-crypto-core)
