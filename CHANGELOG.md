@@ -10,6 +10,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Update parent from 26.23.0 to 26.24.2
+- Disable license plugins for MES instances
 
 ## [2.12.1] - 2025-02-11
 
