@@ -19,6 +19,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.http.urlconnection.ProxyConfiguration;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
@@ -123,6 +124,10 @@ public class ObjectStorageConfiguration {
                 .region(connectionProperties.getRegion())
                 .forcePathStyle(true)
                 .httpClientBuilder(UrlConnectionHttpClient.builder()
+                        .proxyConfiguration(ProxyConfiguration.builder() // Configure proxy to work around the issue https://github.com/aws/aws-sdk-java-v2/issues/4728 which is coming with the aws sdk update
+                                .useSystemPropertyValues(false)
+                                .useEnvironmentVariablesValues(false)
+                                .build())
                         .connectionTimeout(connectionProperties.getS3Timeout())
                         .socketTimeout(connectionProperties.getS3Timeout()))
                 .credentialsProvider(createS3CredentialsProvider(awsCredentialsProvider, connectionProperties))
