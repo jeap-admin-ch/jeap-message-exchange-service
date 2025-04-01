@@ -43,6 +43,8 @@ Apache License Version 2.0
  * AWS SDK for Java - Core - [com.amazonaws:aws-java-sdk-core](https://aws.amazon.com/sdkforjava)
  * AWS Java SDK for AWS STS - [com.amazonaws:aws-java-sdk-sts](https://aws.amazon.com/sdkforjava)
  * JMES Path Query library - [com.amazonaws:jmespath-java](https://aws.amazon.com/sdkforjava)
+ * java-util - [com.cedarsoftware:java-util](https://github.com/jdereg/java-util)
+ * json-io - [com.cedarsoftware:json-io](https://github.com/jdereg/json-io)
  * aalto-xml - [com.fasterxml:aalto-xml](https://github.com/FasterXML/aalto-xml)
  * ClassMate - [com.fasterxml:classmate](https://github.com/FasterXML/java-classmate)
  * Jackson-annotations - [com.fasterxml.jackson.core:jackson-annotations](https://github.com/FasterXML/jackson)
@@ -362,7 +364,7 @@ BSD License 3
 Bouncy Castle Licence
 -------------------------------
 
- * Bouncy Castle Provider - [org.bouncycastle:bcprov-jdk18on](https://www.bouncycastle.org/java.html)
+ * Bouncy Castle Provider - [org.bouncycastle:bcprov-jdk18on](https://www.bouncycastle.org/download/bouncy-castle-java/)
 
 Eclipse Distribution License - v 1.0
 -------------------------------
