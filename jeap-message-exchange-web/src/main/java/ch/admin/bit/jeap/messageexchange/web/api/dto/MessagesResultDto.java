@@ -4,13 +4,16 @@ import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
+@Schema(name = "messages")
 @JacksonXmlRootElement(localName = "messages")
 public record MessagesResultDto(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "message")
+        @Schema(name = "message")
         List<MessageResultDto> messages) {
 
     /**
