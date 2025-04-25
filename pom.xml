@@ -29,16 +29,17 @@
     <parent>
         <groupId>ch.admin.bit.jeap</groupId>
         <artifactId>jeap-spring-boot-parent</artifactId>
-        <version>26.43.2</version>
+        <version>26.46.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
     <artifactId>jeap-message-exchange-service</artifactId>
-    <version>2.17.0-SNAPSHOT</version>
+    <version>2.18.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
         <maven.javadoc.skip>false</maven.javadoc.skip>
+        <sonar.coverage.exclusions>**/PactProviderTestBase.java</sonar.coverage.exclusions>
     </properties>
 
     <modules>
@@ -49,6 +50,7 @@
         <module>jeap-message-exchange-adapter-kafka</module>
         <module>jeap-message-exchange-adapter-metrics</module>
         <module>jeap-message-exchange-web</module>
+        <module>jeap-message-exchange-test</module>
         <module>jeap-message-exchange-service-instance</module>
     </modules>
 
@@ -57,37 +59,42 @@
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-domain</artifactId>
-                <version>2.17.0-SNAPSHOT</version>
+                <version>2.18.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-persistence</artifactId>
-                <version>2.17.0-SNAPSHOT</version>
+                <version>2.18.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-objectstorage</artifactId>
-                <version>2.17.0-SNAPSHOT</version>
+                <version>2.18.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-kafka</artifactId>
-                <version>2.17.0-SNAPSHOT</version>
+                <version>2.18.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-metrics</artifactId>
-                <version>2.17.0-SNAPSHOT</version>
+                <version>2.18.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-web</artifactId>
-                <version>2.17.0-SNAPSHOT</version>
+                <version>2.18.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.admin.bit.jeap</groupId>
+                <artifactId>jeap-message-exchange-test</artifactId>
+                <version>2.18.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-plugin-api</artifactId>
-                <version>2.17.0-SNAPSHOT</version>
+                <version>2.18.0-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

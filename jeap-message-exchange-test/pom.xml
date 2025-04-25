@@ -10,27 +10,31 @@
         <version>2.18.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>jeap-message-exchange-adapter-metrics</artifactId>
+    <artifactId>jeap-message-exchange-test</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>ch.admin.bit.jeap</groupId>
-            <artifactId>jeap-message-exchange-domain</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>ch.admin.bit.jeap</groupId>
-            <artifactId>jeap-spring-boot-monitoring-starter</artifactId>
+            <artifactId>jeap-message-exchange-web</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
+            <artifactId>spring-boot-starter-test</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>au.com.dius.pact.provider</groupId>
+            <artifactId>junit5</artifactId>
+            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
         </dependency>
     </dependencies>
-
 </project>

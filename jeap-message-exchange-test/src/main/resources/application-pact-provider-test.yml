@@ -1,0 +1,46 @@
+server:
+  port: 1235
+
+spring.autoconfigure.exclude:
+  - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+  - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+
+messageexchange:
+  received-event-listener:
+    topic-name: jme-messageexchange-b2bhubv2messagereceived
+    service-name: jme-message-exchange-service
+    system-name: jme
+
+jeap:
+  web:
+    tls:
+      enabled: false
+  messageexchange:
+    kafka:
+      topic:
+        message-received: jme-messageexchange-b2bmessagereceived
+    objectstorage:
+      connection:
+        bucket-name-partner: bazg-jme-messageexchange-partner-obs-dev
+        bucket-name-internal: bazg-jme-messageexchange-internal-obs-dev
+        access-url: http://localhost:9000
+        access-key: local
+        secret-key: localsecret
+
+  messaging:
+    kafka:
+      errorTopicName: jme-messageprocessing-failed
+      systemName: jme
+
+  security:
+    oauth2:
+      resourceserver:
+        system-name: "jme"
+        authorization-server:
+          issuer: "http://localhost:8081/jme-message-exchange-auth-scs"
+          authentication-contexts: b2b, sys
+
+spring:
+  flyway:
+    enabled: false # Disable Flyway for pact tests, DB is mocked

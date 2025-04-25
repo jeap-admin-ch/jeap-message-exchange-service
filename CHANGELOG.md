@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.18.0] - 2025-04-28
+
+### Changed
+
+- added base pact provider test for the message exchange service
+- Update parent from 26.43.2 to 26.46.0
+
 ## [2.17.0] - 2025-04-15
 
 ### Changed
