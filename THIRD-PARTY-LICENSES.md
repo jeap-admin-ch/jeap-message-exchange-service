@@ -8,6 +8,12 @@ Third-party dependencies grouped by their license type (see [pom.xml](/pom.xml) 
 Apache License Version 2.0
 -------------------------------
 
+ * provider - [au.com.dius.pact:provider](https://github.com/pact-foundation/pact-jvm)
+ * matchers - [au.com.dius.pact.core:matchers](https://github.com/pact-foundation/pact-jvm)
+ * model - [au.com.dius.pact.core:model](https://github.com/pact-foundation/pact-jvm)
+ * pactbroker - [au.com.dius.pact.core:pactbroker](https://github.com/pact-foundation/pact-jvm)
+ * support - [au.com.dius.pact.core:support](https://github.com/pact-foundation/pact-jvm)
+ * junit5 - [au.com.dius.pact.provider:junit5](https://github.com/pact-foundation/pact-jvm)
  * jeap-crypto-core - [ch.admin.bit.jeap:jeap-crypto-core](https://github.com/jeap-admin-ch/jeap-crypto/tree/main/jeap-crypto-core)
  * jeap-message-exchange-adapter-kafka - [ch.admin.bit.jeap:jeap-message-exchange-adapter-kafka](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-adapter-kafka)
  * jeap-message-exchange-adapter-metrics - [ch.admin.bit.jeap:jeap-message-exchange-adapter-metrics](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-adapter-metrics)
@@ -15,6 +21,7 @@ Apache License Version 2.0
  * jeap-message-exchange-domain - [ch.admin.bit.jeap:jeap-message-exchange-domain](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-domain)
  * jeap-message-exchange-persistence - [ch.admin.bit.jeap:jeap-message-exchange-persistence](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-persistence)
  * jeap-message-exchange-plugin-api - [ch.admin.bit.jeap:jeap-message-exchange-plugin-api](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-plugin-api)
+ * jeap-message-exchange-test - [ch.admin.bit.jeap:jeap-message-exchange-test](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-test)
  * jeap-message-exchange-web - [ch.admin.bit.jeap:jeap-message-exchange-web](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-web)
  * jeap-messaging-api - [ch.admin.bit.jeap:jeap-messaging-api](https://github.com/jeap-admin-ch/jeap-messaging/tree/main/jeap-messaging-api)
  * jeap-messaging-avro - [ch.admin.bit.jeap:jeap-messaging-avro](https://github.com/jeap-admin-ch/jeap-messaging/tree/main/jeap-messaging-avro)
@@ -60,6 +67,8 @@ Apache License Version 2.0
  * Jackson-module-parameter-names - [com.fasterxml.jackson.module:jackson-module-parameter-names](https://github.com/FasterXML/jackson-modules-java8/jackson-module-parameter-names)
  * jackson-module-scala - [com.fasterxml.jackson.module:jackson-module-scala_2.13](https://github.com/FasterXML/jackson-module-scala)
  * Woodstox - [com.fasterxml.woodstox:woodstox-core](https://github.com/FasterXML/woodstox)
+ * colormath - [com.github.ajalt:colormath](https://github.com/ajalt/colormath)
+ * mordant - [com.github.ajalt:mordant](https://github.com/ajalt/mordant)
  * Caffeine cache - [com.github.ben-manes.caffeine:caffeine](https://github.com/ben-manes/caffeine)
  * docker-java-api - [com.github.docker-java:docker-java-api](https://github.com/docker-java/docker-java)
  * docker-java-api - [com.github.docker-java:docker-java-api](https://github.com/docker-java/docker-java)
@@ -67,14 +76,20 @@ Apache License Version 2.0
  * docker-java-transport - [com.github.docker-java:docker-java-transport](https://github.com/docker-java/docker-java)
  * docker-java-transport-zerodep - [com.github.docker-java:docker-java-transport-zerodep](https://github.com/docker-java/docker-java)
  * docker-java-transport-zerodep - [com.github.docker-java:docker-java-transport-zerodep](https://github.com/docker-java/docker-java)
+ * Generex - [com.github.mifmif:generex](https://github.com/mifmif/Generex/tree/master)
  * JCIP Annotations under Apache License - [com.github.stephenc.jcip:jcip-annotations](http://stephenc.github.com/jcip-annotations)
+ * Google Android Annotations Library - [com.google.android:annotations](http://source.android.com/)
+ * proto-google-common-protos - [com.google.api.grpc:proto-google-common-protos](https://github.com/googleapis/sdk-platform-java)
  * proto-google-common-protos - [com.google.api.grpc:proto-google-common-protos](https://github.com/googleapis/java-iam/proto-google-common-protos)
  * FindBugs-jsr305 - [com.google.code.findbugs:jsr305](http://findbugs.sourceforge.net/)
  * Gson - [com.google.code.gson:gson](https://github.com/google/gson)
  * error-prone annotations - [com.google.errorprone:error_prone_annotations](https://errorprone.info/error_prone_annotations)
+ * error-prone annotations - [com.google.errorprone:error_prone_annotations](https://errorprone.info/error_prone_annotations)
  * Guava InternalFutureFailureAccess and InternalFutures - [com.google.guava:failureaccess](https://github.com/google/guava/failureaccess)
  * Guava: Google Core Libraries for Java - [com.google.guava:guava](https://github.com/google/guava)
+ * Guava: Google Core Libraries for Java - [com.google.guava:guava](https://github.com/google/guava)
  * Guava ListenableFuture only - [com.google.guava:listenablefuture](https://github.com/google/guava/listenablefuture)
+ * J2ObjC Annotations - [com.google.j2objc:j2objc-annotations](https://github.com/google/j2objc/)
  * J2ObjC Annotations - [com.google.j2objc:j2objc-annotations](https://github.com/google/j2objc/)
  * Jimfs - [com.google.jimfs:jimfs](https://github.com/google/jimfs/jimfs)
  * json-path - [com.jayway.jsonpath:json-path](https://github.com/jayway/JsonPath)
@@ -118,6 +133,19 @@ Apache License Version 2.0
  * Log Redactor - [io.confluent:logredactor](https://github.com/confluentinc/logredactor)
  * Log Redactor Metrics - [io.confluent:logredactor-metrics](https://github.com/confluentinc/logredactor)
  * Metrics Core - [io.dropwizard.metrics:metrics-core](https://metrics.dropwizard.io/metrics-core)
+ * java-diff-utils - [io.github.java-diff-utils:java-diff-utils](https://github.com/java-diff-utils/java-diff-utils/java-diff-utils)
+ * kotlin-logging - [io.github.oshai:kotlin-logging-jvm](https://github.com/oshai/kotlin-logging)
+ * io.grpc:grpc-api - [io.grpc:grpc-api](https://github.com/grpc/grpc-java)
+ * io.grpc:grpc-context - [io.grpc:grpc-context](https://github.com/grpc/grpc-java)
+ * io.grpc:grpc-core - [io.grpc:grpc-core](https://github.com/grpc/grpc-java)
+ * io.grpc:grpc-netty - [io.grpc:grpc-netty](https://github.com/grpc/grpc-java)
+ * io.grpc:grpc-protobuf - [io.grpc:grpc-protobuf](https://github.com/grpc/grpc-java)
+ * io.grpc:grpc-protobuf-lite - [io.grpc:grpc-protobuf-lite](https://github.com/grpc/grpc-java)
+ * io.grpc:grpc-stub - [io.grpc:grpc-stub](https://github.com/grpc/grpc-java)
+ * io.grpc:grpc-util - [io.grpc:grpc-util](https://github.com/grpc/grpc-java)
+ * ktor-http - [io.ktor:ktor-http-jvm](https://github.com/ktorio/ktor)
+ * ktor-io - [io.ktor:ktor-io-jvm](https://github.com/ktorio/ktor)
+ * ktor-utils - [io.ktor:ktor-utils-jvm](https://github.com/ktorio/ktor)
  * context-propagation - [io.micrometer:context-propagation](https://github.com/micrometer-metrics/context-propagation)
  * micrometer-commons - [io.micrometer:micrometer-commons](https://github.com/micrometer-metrics/micrometer)
  * micrometer-core - [io.micrometer:micrometer-core](https://github.com/micrometer-metrics/micrometer)
@@ -130,14 +158,17 @@ Apache License Version 2.0
  * Netty/Codec - [io.netty:netty-codec](https://netty.io/netty-codec/)
  * Netty/Codec/HTTP - [io.netty:netty-codec-http](https://netty.io/netty-codec-http/)
  * Netty/Codec/HTTP2 - [io.netty:netty-codec-http2](https://netty.io/netty-codec-http2/)
+ * Netty/Codec/Socks - [io.netty:netty-codec-socks](https://netty.io/netty-codec-socks/)
  * Netty/Common - [io.netty:netty-common](https://netty.io/netty-common/)
  * Netty/Handler - [io.netty:netty-handler](https://netty.io/netty-handler/)
+ * Netty/Handler/Proxy - [io.netty:netty-handler-proxy](https://netty.io/netty-handler-proxy/)
  * Netty/Resolver - [io.netty:netty-resolver](https://netty.io/netty-resolver/)
  * Netty/Transport - [io.netty:netty-transport](https://netty.io/netty-transport/)
  * Netty/Transport/Classes/Epoll - [io.netty:netty-transport-classes-epoll](https://netty.io/netty-transport-classes-epoll/)
  * Netty/Transport/Native/Epoll - [io.netty:netty-transport-native-epoll](https://netty.io/netty-transport-native-epoll/)
  * Netty/Transport/Native/Unix/Common - [io.netty:netty-transport-native-unix-common](https://netty.io/netty-transport-native-unix-common/)
  * Swift Poet - [io.outfoxx:swiftpoet](https://github.com/outfoxx/swiftpoet)
+ * perfmark:perfmark-api - [io.perfmark:perfmark-api](https://github.com/perfmark/perfmark)
  * Java CF Env Core Library - [io.pivotal.cfenv:java-cfenv](https://github.com/pivotal-cf/java-cfenv/)
  * Java CF Env Boot Support - [io.pivotal.cfenv:java-cfenv-boot](https://github.com/pivotal-cf/java-cfenv/)
  * Java CF Env JDBC Support Library - [io.pivotal.cfenv:java-cfenv-jdbc](https://github.com/pivotal-cf/java-cfenv/)
@@ -180,12 +211,17 @@ Apache License Version 2.0
  * Apache Commons Collections - [org.apache.commons:commons-collections4](https://commons.apache.org/proper/commons-collections/)
  * Apache Commons Compress - [org.apache.commons:commons-compress](https://commons.apache.org/proper/commons-compress/)
  * Apache Commons Lang - [org.apache.commons:commons-lang3](https://commons.apache.org/proper/commons-lang/)
+ * Apache Commons Text - [org.apache.commons:commons-text](https://commons.apache.org/proper/commons-text)
  * Apache Groovy - [org.apache.groovy:groovy](https://groovy-lang.org)
  * Apache Groovy - [org.apache.groovy:groovy-json](https://groovy-lang.org)
  * Apache Groovy - [org.apache.groovy:groovy-xml](https://groovy-lang.org)
  * Apache HttpClient - [org.apache.httpcomponents:httpclient](http://hc.apache.org/httpcomponents-client)
  * Apache HttpCore - [org.apache.httpcomponents:httpcore](http://hc.apache.org/httpcomponents-core-ga)
  * Apache HttpClient Mime - [org.apache.httpcomponents:httpmime](http://hc.apache.org/httpcomponents-client)
+ * Apache HttpClient - [org.apache.httpcomponents.client5:httpclient5](https://hc.apache.org/httpcomponents-client-5.4.x/5.4.2/httpclient5/)
+ * Apache HttpClient Fluent - [org.apache.httpcomponents.client5:httpclient5-fluent](https://hc.apache.org/httpcomponents-client-5.4.x/5.4.2/httpclient5-fluent/)
+ * Apache HttpComponents Core HTTP/1.1 - [org.apache.httpcomponents.core5:httpcore5](https://hc.apache.org/httpcomponents-core-5.3.x/5.3.3/httpcore5/)
+ * Apache HttpComponents Core HTTP/2 - [org.apache.httpcomponents.core5:httpcore5-h2](https://hc.apache.org/httpcomponents-core-5.3.x/5.3.3/httpcore5-h2/)
  * Apache Kafka - [org.apache.kafka:kafka-clients](https://kafka.apache.org)
  * Apache Kafka - [org.apache.kafka:kafka-group-coordinator](https://kafka.apache.org)
  * Apache Kafka - [org.apache.kafka:kafka-group-coordinator-api](https://kafka.apache.org)
@@ -202,6 +238,7 @@ Apache License Version 2.0
  * Apache Kafka - [org.apache.kafka:kafka_2.13](https://kafka.apache.org)
  * Apache Log4j API - [org.apache.logging.log4j:log4j-api](https://logging.apache.org/log4j/2.x/log4j/log4j-api/)
  * Log4j API to SLF4J Adapter - [org.apache.logging.log4j:log4j-to-slf4j](https://logging.apache.org/log4j/2.x/log4j/log4j-to-slf4j/)
+ * Apache Tika core - [org.apache.tika:tika-core](https://tika.apache.org/)
  * tomcat-embed-core - [org.apache.tomcat.embed:tomcat-embed-core](https://tomcat.apache.org/)
  * tomcat-embed-el - [org.apache.tomcat.embed:tomcat-embed-el](https://tomcat.apache.org/)
  * tomcat-embed-websocket - [org.apache.tomcat.embed:tomcat-embed-websocket](https://tomcat.apache.org/)
@@ -210,6 +247,7 @@ Apache License Version 2.0
  * Apache ZooKeeper - Jute - [org.apache.zookeeper:zookeeper-jute](http://zookeeper.apache.org/zookeeper-jute)
  * org.apiguardian:apiguardian-api - [org.apiguardian:apiguardian-api](https://github.com/apiguardian-team/apiguardian)
  * AssertJ Core - [org.assertj:assertj-core](https://assertj.github.io/doc/#assertj-core)
+ * Evo Inflector - [org.atteo:evo-inflector](http://atteo.org/static/evo-inflector)
  * Awaitility - [org.awaitility:awaitility](http://awaitility.org)
  * jose4j - [org.bitbucket.b_c:jose4j](https://bitbucket.org/b_c/jose4j/)
  * TagSoup - [org.ccil.cowan.tagsoup:tagsoup](http://home.ccil.org/~cowan/XML/tagsoup/)
@@ -231,12 +269,14 @@ Apache License Version 2.0
  * Kotlin Stdlib Jdk7 - [org.jetbrains.kotlin:kotlin-stdlib-jdk7](https://kotlinlang.org/)
  * Kotlin Stdlib Jdk8 - [org.jetbrains.kotlin:kotlin-stdlib-jdk8](https://kotlinlang.org/)
  * kotlinx-coroutines-core - [org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm](https://github.com/Kotlin/kotlinx.coroutines)
+ * kotlinx-coroutines-jdk8 - [org.jetbrains.kotlinx:kotlinx-coroutines-jdk8](https://github.com/Kotlin/kotlinx.coroutines)
  * kotlinx-datetime - [org.jetbrains.kotlinx:kotlinx-datetime-jvm](https://github.com/Kotlin/kotlinx-datetime)
  * kotlinx-serialization-core - [org.jetbrains.kotlinx:kotlinx-serialization-core-jvm](https://github.com/Kotlin/kotlinx.serialization)
  * JSpecify annotations - [org.jspecify:jspecify](http://jspecify.org/)
  * LZ4 and xxHash - [org.lz4:lz4-java](https://github.com/lz4/lz4-java)
  * Objenesis - [org.objenesis:objenesis](http://objenesis.org/objenesis)
  * org.opentest4j:opentest4j - [org.opentest4j:opentest4j](https://github.com/ota4j-team/opentest4j)
+ * Java archiving library - [org.rauschig:jarchivelib](http://rauschig.org/jarchivelib)
  * Reflections - [org.reflections:reflections](http://github.com/ronmamo/reflections)
  * Scala Library - [org.scala-lang:scala-library](https://www.scala-lang.org/)
  * Scala Reflect - [org.scala-lang:scala-reflect](https://www.scala-lang.org/)
@@ -343,17 +383,33 @@ BSD
 -------------------------------
 
  * ParaNamer Core - [com.thoughtworks.paranamer:paranamer](https://github.com/paul-hammant/paranamer/paranamer)
+ * Automaton - [dk.brics.automaton:automaton](http://www.brics.dk/automaton/)
 
 BSD 2-Clause License
 -------------------------------
 
  * zstd-jni - [com.github.luben:zstd-jni](https://github.com/luben/zstd-jni)
+ * flexmark-java core - [com.vladsch.flexmark:flexmark](https://github.com/vsch/flexmark-java/flexmark)
+ * flexmark-java extension for tables - [com.vladsch.flexmark:flexmark-ext-tables](https://github.com/vsch/flexmark-java/flexmark-ext-tables)
+ * flexmark-java utilities - [com.vladsch.flexmark:flexmark-util](https://github.com/vsch/flexmark-java/flexmark-util)
+ * flexmark-java ast utilities - [com.vladsch.flexmark:flexmark-util-ast](https://github.com/vsch/flexmark-java/flexmark-util-ast)
+ * flexmark-java builder utilities - [com.vladsch.flexmark:flexmark-util-builder](https://github.com/vsch/flexmark-java/flexmark-util-builder)
+ * flexmark-java collection utilities - [com.vladsch.flexmark:flexmark-util-collection](https://github.com/vsch/flexmark-java/flexmark-util-collection)
+ * flexmark-java data utilities - [com.vladsch.flexmark:flexmark-util-data](https://github.com/vsch/flexmark-java/flexmark-util-data)
+ * flexmark-java dependency utilities - [com.vladsch.flexmark:flexmark-util-dependency](https://github.com/vsch/flexmark-java/flexmark-util-dependency)
+ * flexmark-java format utilities - [com.vladsch.flexmark:flexmark-util-format](https://github.com/vsch/flexmark-java/flexmark-util-format)
+ * flexmark-java html utilities - [com.vladsch.flexmark:flexmark-util-html](https://github.com/vsch/flexmark-java/flexmark-util-html)
+ * flexmark-java misc utilities - [com.vladsch.flexmark:flexmark-util-misc](https://github.com/vsch/flexmark-java/flexmark-util-misc)
+ * flexmark-java options utilities - [com.vladsch.flexmark:flexmark-util-options](https://github.com/vsch/flexmark-java/flexmark-util-options)
+ * flexmark-java sequence utilities - [com.vladsch.flexmark:flexmark-util-sequence](https://github.com/vsch/flexmark-java/flexmark-util-sequence)
+ * flexmark-java visitor utilities - [com.vladsch.flexmark:flexmark-util-visitor](https://github.com/vsch/flexmark-java/flexmark-util-visitor)
  * HdrHistogram - [org.hdrhistogram:HdrHistogram](http://hdrhistogram.github.io/HdrHistogram/)
  * PostgreSQL JDBC Driver - [org.postgresql:postgresql](https://jdbc.postgresql.org)
 
 BSD License 3
 -------------------------------
 
+ * Protocol Buffers [Core] - [com.google.protobuf:protobuf-java](https://developers.google.com/protocol-buffers/protobuf-java/)
  * Protocol Buffers [Core] - [com.google.protobuf:protobuf-java](https://developers.google.com/protocol-buffers/protobuf-java/)
  * commons-compiler - [org.codehaus.janino:commons-compiler](http://janino-compiler.github.io/commons-compiler/)
  * janino - [org.codehaus.janino:janino](http://janino-compiler.github.io/janino/)
@@ -365,6 +421,16 @@ Bouncy Castle Licence
 -------------------------------
 
  * Bouncy Castle Provider - [org.bouncycastle:bcprov-jdk18on](https://www.bouncycastle.org/download/bouncy-castle-java/)
+
+CDDL
+-------------------------------
+
+ * JavaMail API (compat) - [javax.mail:mail](http://kenai.com/projects/javamail/mail)
+
+Common Development and Distribution License (CDDL) v1.0
+-------------------------------
+
+ * JavaBeans Activation Framework (JAF) - [javax.activation:activation](http://java.sun.com/products/javabeans/jaf/index.jsp)
 
 Eclipse Distribution License - v 1.0
 -------------------------------
@@ -390,6 +456,7 @@ Eclipse Public License, Version 1.0
 
  * Logback Classic Module - [ch.qos.logback:logback-classic](http://logback.qos.ch/logback-classic)
  * Logback Core Module - [ch.qos.logback:logback-core](http://logback.qos.ch/logback-core)
+ * H2 Database Engine - [com.h2database:h2](https://h2database.com)
  * JUnit - [junit:junit](http://junit.org)
 
 GNU General Public License, version 2 (GPL2), with the classpath exception
@@ -403,10 +470,20 @@ GNU Lesser General Public License
  * Logback Classic Module - [ch.qos.logback:logback-classic](http://logback.qos.ch/logback-classic)
  * Logback Core Module - [ch.qos.logback:logback-core](http://logback.qos.ch/logback-core)
 
+GPLv2+CE
+-------------------------------
+
+ * JavaMail API (compat) - [javax.mail:mail](http://kenai.com/projects/javamail/mail)
+
 Go License
 -------------------------------
 
  * RE2/J - [com.google.re2j:re2j](http://github.com/google/re2j)
+
+ISC License
+-------------------------------
+
+ * kotlin-result - [com.michael-bull.kotlin-result:kotlin-result-jvm](https://github.com/michaelbull/kotlin-result)
 
 LGPL 2.1
 -------------------------------
@@ -423,13 +500,19 @@ MIT License
 -------------------------------
 
  * minimal-json - [com.eclipsesource.minimal-json:minimal-json](https://github.com/ralfstx/minimal-json)
+ * Java SemVer - [com.github.zafarkhaja:java-semver](https://github.com/zafarkhaja/jsemver)
+ * semver4j - [com.vdurmont:semver4j](https://github.com/vdurmont/semver4j)
  * ClassGraph - [io.github.classgraph:classgraph](https://github.com/classgraph/classgraph)
+ * ClassGraph - [io.github.classgraph:classgraph](https://github.com/classgraph/classgraph)
+ * toml4j - [io.hotmoka:toml4j](http://moandjiezana.com/toml/toml4j)
+ * core - [io.pact.plugin.driver:core](https://github.com/pact-foundation/pact-plugins)
  * Logstash Logback Encoder - [net.logstash.logback:logstash-logback-encoder](https://github.com/logstash/logstash-logback-encoder)
  * Logstash Logback Encoder - [net.logstash.logback:logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder)
  * JOpt Simple - [net.sf.jopt-simple:jopt-simple](http://jopt-simple.github.io/jopt-simple)
  * argparse4j - [net.sourceforge.argparse4j:argparse4j](http://argparse4j.github.io)
  * Checker Qual - [org.checkerframework:checker-qual](https://checkerframework.org/)
  * Checker Qual - [org.checkerframework:checker-qual](https://checkerframework.org/)
+ * Animal Sniffer Annotations - [org.codehaus.mojo:animal-sniffer-annotations](https://www.mojohaus.org/animal-sniffer/animal-sniffer-annotations)
  * mockito-core - [org.mockito:mockito-core](https://github.com/mockito/mockito)
  * mockito-junit-jupiter - [org.mockito:mockito-junit-jupiter](https://github.com/mockito/mockito)
  * PCollections - [org.pcollections:pcollections](https://github.com/hrldcpr/pcollections)
@@ -452,6 +535,11 @@ MPL 1.1
 -------------------------------
 
  * Javassist - [org.javassist:javassist](http://www.javassist.org/)
+
+Mozilla Public License, Version 2.0
+-------------------------------
+
+ * H2 Database Engine - [com.h2database:h2](https://h2database.com)
 
 Public Domain
 -------------------------------
