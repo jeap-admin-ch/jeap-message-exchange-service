@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>jeap-message-exchange-service-instance</artifactId>
+    <name>${project.groupId}:${project.artifactId}</name>
     <version>2.19.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 

@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>jeap-message-exchange-adapter-objectstorage</artifactId>
+    <name>${project.groupId}:${project.artifactId}</name>
 
     <properties>
         <testcontainers.version>1.18.3</testcontainers.version>

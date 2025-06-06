@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>jeap-message-exchange-adapter-metrics</artifactId>
+    <name>${project.groupId}:${project.artifactId}</name>
 
     <dependencies>
         <dependency>
