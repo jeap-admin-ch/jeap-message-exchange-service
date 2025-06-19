@@ -119,11 +119,12 @@ Apache License Version 2.0
  * JSON library from Android SDK - [com.vaadin.external.google:android-json](http://developer.android.com/sdk)
  * Metrics Core Library - [com.yammer.metrics:metrics-core](http://metrics.codahale.com/metrics-core/)
  * HikariCP - [com.zaxxer:HikariCP](https://github.com/brettwooldridge/HikariCP)
- * Apache Commons BeanUtils - [commons-beanutils:commons-beanutils](https://commons.apache.org/proper/commons-beanutils/)
+ * Apache Commons BeanUtils - [commons-beanutils:commons-beanutils](https://commons.apache.org/proper/commons-beanutils)
  * Apache Commons CLI - [commons-cli:commons-cli](http://commons.apache.org/proper/commons-cli/)
  * Apache Commons Codec - [commons-codec:commons-codec](https://commons.apache.org/proper/commons-codec/)
  * Apache Commons Collections - [commons-collections:commons-collections](http://commons.apache.org/collections/)
  * Commons Digester - [commons-digester:commons-digester](http://commons.apache.org/digester/)
+ * Apache Commons IO - [commons-io:commons-io](https://commons.apache.org/proper/commons-io/)
  * Apache Commons IO - [commons-io:commons-io](https://commons.apache.org/proper/commons-io/)
  * Apache Commons Validator - [commons-validator:commons-validator](http://commons.apache.org/proper/commons-validator/)
  * utils - [io.confluent:common-utils](https://confluent.io/common-utils)
@@ -408,7 +409,6 @@ BSD 2-Clause License
 BSD License 3
 -------------------------------
 
- * Protocol Buffers [Core] - [com.google.protobuf:protobuf-java](https://developers.google.com/protocol-buffers/protobuf-java/)
  * Protocol Buffers [Core] - [com.google.protobuf:protobuf-java](https://developers.google.com/protocol-buffers/protobuf-java/)
  * commons-compiler - [org.codehaus.janino:commons-compiler](http://janino-compiler.github.io/commons-compiler/)
  * janino - [org.codehaus.janino:janino](http://janino-compiler.github.io/janino/)
