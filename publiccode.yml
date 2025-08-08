@@ -14,11 +14,24 @@ softwareType: library
 description:
   en:
     localisedName: jeap-message-exchange-service
-    shortDescription: TODO (Max. 150 characters)
+    shortDescription: Service to exchange messages with external business partners asynchronously over a REST API in both directions (inbound and outbound).
     longDescription: >
-      TODO (Min. 150 characters)
+      The Message Exchange Service (MES) is a reusable jEAP-based microservice designed
+      for secure, asynchronous file-transfer-style communication between internal systems
+      and external business partners. It provides a simple REST API for sending, receiving,
+      and retrieving messages, with built-in support for partner-specific roles and tenant
+      security. The Message Exchange Service manages message
+      storage in databases and S3 object storage, includes configurable housekeeping,
+      supports optional fallback buckets, and offers integration with AWS-based malware
+      scanning to block infected messages before delivery. It exposes detailed operational
+      metrics for HTTP, database, and S3 operations to facilitate monitoring and ensures
+      consistent, standardized deployment aligned with other jEAP microservices.
     features:
-      - TODO
+      - Message exchange API for asynchronous communication with external partners
+      - Support for inbound and outbound messages
+      - Partner-specific roles and tenant security
+      - Configurable housekeeping for message storage
+      - Integration with AWS-based malware scanning
 legal:
   license: Apache-2.0
 maintenance:
