@@ -12,7 +12,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class MessageExchangeServiceContractsValidator {
 
-    private static final AvroMessageType B2B_MESSAGE_RECEIVED_EVENT = new AvroMessageType(B2BMessageReceivedEvent.getClassSchema().getName(), B2BMessageReceivedEvent.MESSAGE_TYPE_VERSION$);
+    private static final AvroMessageType B2B_MESSAGE_RECEIVED_EVENT = AvroMessageType.newBuilder()
+            .setName(B2BMessageReceivedEvent.getClassSchema().getName())
+            .setVersion(B2BMessageReceivedEvent.MESSAGE_TYPE_VERSION$)
+            .build();
 
     private final DefaultContractsValidator defaultContractsValidator;
     private final TopicConfiguration topicConfiguration;
