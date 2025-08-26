@@ -2,6 +2,7 @@ package ch.admin.bit.jeap.messageexchange.kafka;
 
 
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
+import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
@@ -30,33 +31,46 @@ public class TopicConfiguration {
 
     @NotEmpty
     private String messageReceived;
+    private String messageSent;
     private String malwareScanResult;
 
     @Configuration
     @Profile("cloud|aws")
     @RequiredArgsConstructor
     @SuppressWarnings({"unused", "findbugs:RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"})
-    private static class TopicConfigurationCloud {
+    static class TopicConfigurationCloud {
         private final KafkaAdmin kafkaAdmin;
         private final MalwareScanProperties malwareScanProperties;
+        private final MessageSentProperties messageSentProperties;
         private final TopicConfiguration topicConfiguration;
 
         @PostConstruct
         public void checkIfTopicsExist() throws ExecutionException, InterruptedException {
             try (AdminClient adminClient = AdminClient.create(kafkaAdmin.getConfigurationProperties())) {
-                List<String> topics = new ArrayList<>();
-                topics.add(topicConfiguration.getMessageReceived());
-                if (malwareScanProperties.isEnabled()) {
-                    if (!StringUtils.hasText(topicConfiguration.getMalwareScanResult())) {
-                        throw new IllegalStateException("Malware scan is enabled but no topic is configured");
-                    }
-                    topics.add(topicConfiguration.getMalwareScanResult());
-                }
-                log.info("Checking if topics exist: {}", topics);
-                Map<String, TopicDescription> stringTopicDescriptionMap = adminClient.describeTopics(topics).allTopicNames().get();
-                stringTopicDescriptionMap.forEach((name, desc) -> log.info("{}: {}", name, desc));
-                log.info("All topics exist, good to go");
+                doCheckIfTopicExists(adminClient);
             }
+        }
+
+        void doCheckIfTopicExists(AdminClient adminClient) throws InterruptedException, ExecutionException {
+            List<String> topics = new ArrayList<>();
+            topics.add(topicConfiguration.getMessageReceived());
+            if (malwareScanProperties.isEnabled()) {
+                if (!StringUtils.hasText(topicConfiguration.getMalwareScanResult())) {
+                    throw new IllegalStateException("Malware scan is enabled but no topic is configured");
+                }
+                topics.add(topicConfiguration.getMalwareScanResult());
+            }
+            if (messageSentProperties.isEnabled()) {
+                if (!StringUtils.hasText(topicConfiguration.getMessageSent())) {
+                    throw new IllegalStateException("Message sent enabled but no topic is configured");
+                }
+                topics.add(topicConfiguration.getMessageSent());
+            }
+
+            log.info("Checking if topics exist: {}", topics);
+            Map<String, TopicDescription> stringTopicDescriptionMap = adminClient.describeTopics(topics).allTopicNames().get();
+            stringTopicDescriptionMap.forEach((name, desc) -> log.info("{}: {}", name, desc));
+            log.info("All topics exist, good to go");
         }
     }
 }

@@ -13,6 +13,7 @@ import ch.admin.bit.jeap.messageexchange.domain.objectstore.BucketType;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTags;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsService;
+import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import ch.admin.bit.jeap.messageexchange.domain.xml.XmlValidatingOutputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ public class MessageExchangeService {
     private final EventPublisher eventPublisher;
     private final MessageRepository messageRepository;
     private final MalwareScanProperties malwareScanProperties;
+    private final MessageSentProperties messageSentProperties;
     private final MetricsService metricsService;
     private final S3ObjectTagsService tagsService;
 
@@ -86,14 +88,22 @@ public class MessageExchangeService {
     }
 
     public void saveNewMessageFromInternalApplication(Message message, MessageContent rawMessageContent) throws IOException {
-        try (InputStream inputStream = XmlValidatingOutputStream.wrapInputStreamWithXmlValidation(message.getMessageId(), message.getBpId(), rawMessageContent)) {
+        UUID messageId = message.getMessageId();
+        String bpId = message.getBpId();
+
+        try (InputStream inputStream = XmlValidatingOutputStream.wrapInputStreamWithXmlValidation(messageId, bpId, rawMessageContent)) {
             MessageContent messageInfo = new MessageContent(inputStream, rawMessageContent.contentLength());
+
             // Save to S3
             // This will validate the XML at the same time by copying output to the XmlValidatingOutputStream
-            objectStore.storeMessage(BucketType.INTERNAL, createInternalMessageObjectKey(message.getBpId(), message.getMessageId()), messageInfo);
+            objectStore.storeMessage(BucketType.INTERNAL, createInternalMessageObjectKey(bpId, messageId), messageInfo);
 
             // Store message in database
             messageRepository.save(message);
+
+            if (messageSentProperties.isEnabled()) {
+                eventPublisher.publishMessageSentEvent(message);
+            }
         }
     }
 

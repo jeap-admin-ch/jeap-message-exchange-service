@@ -1,9 +1,11 @@
 package ch.admin.bit.jeap.messageexchange.kafka;
 
+import ch.admin.bit.jeap.messageexchange.domain.Message;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.PublishedScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.messaging.EventPublisher;
 import ch.admin.bit.jeap.messageexchange.event.message.received.B2BMessageReceivedEvent;
 import ch.admin.bit.jeap.messageexchange.event.message.received.S3ObjectMalwareScanStatus;
+import ch.admin.bit.jeap.messageexchange.event.message.sent.B2BMessageSentEvent;
 import ch.admin.bit.jeap.messageexchange.plugin.api.listener.MessageReceivedListener;
 import ch.admin.bit.jeap.messageexchange.plugin.api.listener.MessageResult;
 import ch.admin.bit.jeap.messaging.avro.AvroMessage;
@@ -50,6 +52,15 @@ public class KafkaEventPublisher implements EventPublisher {
         CompletableFuture.allOf(sendResults.toArray(CompletableFuture[]::new)).join();
     }
 
+    @Override
+    public void publishMessageSentEvent(Message message) {
+        B2BMessageSentEvent messageSentEvent = getB2BMessageSentEvent(message);
+        String topicName = topicConfiguration.getMessageSent();
+        log.debug("Publishing event {} to topic {}.", messageSentEvent, topicName);
+
+        kafkaTemplate.send(topicName, messageSentEvent);
+    }
+
     private MessageResult getB2BMessageReceivedEvent(UUID messageId, String bpId, String type, S3ObjectMalwareScanStatus scanStatus) {
         B2BMessageReceivedEvent messageReceivedEvent = B2BMessageReceivedEventBuilder.create()
                 .bpId(bpId)
@@ -62,6 +73,20 @@ public class KafkaEventPublisher implements EventPublisher {
                 .build();
 
         return new MessageResult(topicConfiguration.getMessageReceived(), messageReceivedEvent);
+    }
+
+    private B2BMessageSentEvent getB2BMessageSentEvent(Message message) {
+        return B2BMessageSentEventBuilder.create()
+                .bpId(message.getBpId())
+                .messageId(message.getMessageId().toString())
+                .type(message.getMessageType())
+                .topicName(message.getTopicName())
+                .groupId(message.getGroupId())
+                .partnerTopic(message.getPartnerTopic())
+                .systemName(kafkaProperties.getSystemName())
+                .serviceName(kafkaProperties.getServiceName())
+                .idempotenceId(message.getMessageId().toString())
+                .build();
     }
 
     private S3ObjectMalwareScanStatus mapStatus(PublishedScanStatus externalPublishedScanStatus) {

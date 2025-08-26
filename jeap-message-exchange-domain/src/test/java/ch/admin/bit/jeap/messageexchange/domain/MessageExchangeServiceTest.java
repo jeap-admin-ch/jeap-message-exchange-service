@@ -11,6 +11,7 @@ import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.BucketType;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsService;
+import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,12 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MessageExchangeServiceTest {
@@ -94,11 +90,14 @@ class MessageExchangeServiceTest {
     private MalwareScanProperties malwareScanProperties;
 
     @Mock
+    private MessageSentProperties messageSentProperties;
+
+    @Mock
     private MetricsService metricsService;
 
     @BeforeEach
     void setup() {
-        messageExchangeService = new MessageExchangeService(objectStore, eventPublisher, messageRepository, malwareScanProperties, metricsService, new S3ObjectTagsService());
+        messageExchangeService = new MessageExchangeService(objectStore, eventPublisher, messageRepository, malwareScanProperties, messageSentProperties, metricsService, new S3ObjectTagsService());
     }
 
     @Test
@@ -172,10 +171,32 @@ class MessageExchangeServiceTest {
 
         messageExchangeService.saveNewMessageFromInternalApplication(message, new MessageContent(xmlContent, 42));
 
-        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), any(PublishedScanStatus.class));
         assertThat(storedMessage).isEqualTo(xmlContentString);
 
         verify(messageRepository, times(1)).save(message);
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    @SneakyThrows
+    void saveNewMessageFromInternal_xmlValid_messageSaved_publish_message_sent_enabled() {
+        when(messageSentProperties.isEnabled()).thenReturn(true);
+        Message message = Message.builder()
+                .messageId(UUID.randomUUID())
+                .bpId("bpId")
+                .messageType("messageType")
+                .topicName("topicName")
+                .build();
+        String xmlContentString = "<valid/>";
+        InputStream xmlContent = new ByteArrayInputStream(xmlContentString.getBytes(UTF_8));
+
+        messageExchangeService.saveNewMessageFromInternalApplication(message, new MessageContent(xmlContent, 42));
+
+        assertThat(storedMessage).isEqualTo(xmlContentString);
+
+        verify(messageRepository, times(1)).save(message);
+        verify(eventPublisher, times(1)).publishMessageSentEvent(message);
+        verifyNoMoreInteractions(eventPublisher);
     }
 
     @Test

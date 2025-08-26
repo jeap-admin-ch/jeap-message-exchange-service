@@ -1,6 +1,7 @@
 package ch.admin.bit.jeap.messageexchange.kafka;
 
 import ch.admin.bit.jeap.messageexchange.event.message.received.B2BMessageReceivedEvent;
+import ch.admin.bit.jeap.messageexchange.event.message.sent.B2BMessageSentEvent;
 import ch.admin.bit.jeap.messaging.avro.AvroMessageType;
 import ch.admin.bit.jeap.messaging.kafka.contract.ContractsProvider;
 import ch.admin.bit.jeap.messaging.kafka.contract.DefaultContractsValidator;
@@ -17,6 +18,11 @@ public class MessageExchangeServiceContractsValidator {
             .setVersion(B2BMessageReceivedEvent.MESSAGE_TYPE_VERSION$)
             .build();
 
+    private static final AvroMessageType B2B_MESSAGE_SENT_EVENT = AvroMessageType.newBuilder()
+            .setName(B2BMessageSentEvent.getClassSchema().getName())
+            .setVersion(B2BMessageSentEvent.MESSAGE_TYPE_VERSION$)
+            .build();
+
     private final DefaultContractsValidator defaultContractsValidator;
     private final TopicConfiguration topicConfiguration;
 
@@ -30,6 +36,9 @@ public class MessageExchangeServiceContractsValidator {
         defaultContractsValidator.ensurePublisherContract(B2B_MESSAGE_RECEIVED_EVENT, topicConfiguration.getMessageReceived());
         if (topicConfiguration.getMalwareScanResult() != null) {
             defaultContractsValidator.ensureConsumerContract(S3ObjectMalwareScannedEvent.getClassSchema().getName(), topicConfiguration.getMalwareScanResult());
+        }
+        if (topicConfiguration.getMessageSent() != null) {
+            defaultContractsValidator.ensurePublisherContract(B2B_MESSAGE_SENT_EVENT, topicConfiguration.getMessageSent());
         }
     }
 }
