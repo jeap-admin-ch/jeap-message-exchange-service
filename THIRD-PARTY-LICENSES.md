@@ -47,6 +47,7 @@ Apache License Version 2.0
  * ch.admin.bit.jeap:jeap-spring-boot-swagger-starter - [ch.admin.bit.jeap:jeap-spring-boot-swagger-starter](https://github.com/jeap-admin-ch/jeap-spring-boot-starters/tree/main/jeap-spring-boot-swagger-starter)
  * ch.admin.bit.jeap:jeap-spring-boot-tx - [ch.admin.bit.jeap:jeap-spring-boot-tx](https://github.com/jeap-admin-ch/jeap-spring-boot-starters/tree/main/jeap-spring-boot-tx)
  * b2-b-message-received-event - ch.admin.bit.jeap.messagetype.jeap:b2-b-message-received-event
+ * ch.admin.bit.jeap.messagetype.jeap:b2-b-message-sent-event - [ch.admin.bit.jeap.messagetype.jeap:b2-b-message-sent-event](https://github.com/jeap-admin-ch/jeap-message-type-registry/tree/main)
  * s3-object-malware-scanned-event - ch.admin.bit.jeap.messagetype.jeap:s3-object-malware-scanned-event
  * AWS SDK for Java - Core - [com.amazonaws:aws-java-sdk-core](https://aws.amazon.com/sdkforjava)
  * AWS Java SDK for AWS STS - [com.amazonaws:aws-java-sdk-sts](https://aws.amazon.com/sdkforjava)
