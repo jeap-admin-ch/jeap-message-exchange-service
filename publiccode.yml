@@ -1,8 +1,8 @@
 publiccodeYmlVersion: 0.4.0
 name: jeap-message-exchange-service
 applicationSuite: jEAP
-softwareVersion: 2.29.0
-releaseDate: 2025-08-27
+softwareVersion: 2.30.0
+releaseDate: 2025-08-29
 url: "https://github.com/jeap-admin-ch/jeap-message-exchange-service.git"
 landingURL: "https://github.com/jeap-admin-ch/jeap"
 platforms:
