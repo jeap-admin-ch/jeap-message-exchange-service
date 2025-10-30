@@ -4,7 +4,6 @@ import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.PublishedScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.S3ObjectMalwareScanResultInfo;
-import ch.admin.bit.jeap.messageexchange.domain.malwarescan.ScanResult;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.ScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.messaging.EventPublisher;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
@@ -13,6 +12,8 @@ import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsService;
 import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
+import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanResult;
+import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanTrigger;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MessageExchangeServiceTest {
+
+    private static final String PARTNER_BUCKET_NAME = "the_bucket";
 
     private MessageExchangeService messageExchangeService;
 
@@ -78,6 +81,11 @@ class MessageExchangeServiceTest {
             storedTags.putAll(tagsToUpdate);
             return storedTags;
         }
+
+        @Override
+        public String getBucketName(BucketType bucketType) {
+            return PARTNER_BUCKET_NAME;
+        }
     };
 
     @Mock
@@ -97,7 +105,7 @@ class MessageExchangeServiceTest {
 
     @BeforeEach
     void setup() {
-        messageExchangeService = new MessageExchangeService(objectStore, eventPublisher, messageRepository, malwareScanProperties, messageSentProperties, metricsService, new S3ObjectTagsService());
+        messageExchangeService = new MessageExchangeService(objectStore, eventPublisher, messageRepository, malwareScanProperties, messageSentProperties, metricsService, new S3ObjectTagsService(), Optional.empty());
     }
 
     @Test
@@ -121,7 +129,7 @@ class MessageExchangeServiceTest {
 
     @Test
     @SneakyThrows
-    void saveNewMessageFromPartnerMalwareScanEnabled_xmlValid_messageSaved() {
+    void saveNewMessageFromPartnerMalwareScanEnabled_xmlValid_messageNotSaved() {
         UUID messageId = UUID.randomUUID();
         String bpId = "bpId";
         String messageType = "messageType";
@@ -136,6 +144,33 @@ class MessageExchangeServiceTest {
         assertThat(storedMessage).isEqualTo(xmlContentString);
         assertThat(storedTags).containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis");
         assertThat(storedTags).containsEntry("scanStatus", ScanStatus.SCAN_PENDING.name());
+
+        verify(messageRepository, never()).save(any(Message.class));
+    }
+
+    @Test
+    @SneakyThrows
+    void saveNewMessageFromPartnerMalwareScanEnabledAndNotifierSet_xmlValid_messageNotSaved() {
+        when(malwareScanProperties.isEnabled()).thenReturn(true);
+        MalwareScanTrigger malwareScanTrigger = mock(MalwareScanTrigger.class);
+
+        messageExchangeService = new MessageExchangeService(objectStore, eventPublisher, messageRepository, malwareScanProperties, messageSentProperties, metricsService, new S3ObjectTagsService(), Optional.of(malwareScanTrigger));
+
+        UUID messageId = UUID.randomUUID();
+        String bpId = "bpId";
+        String messageType = "messageType";
+        String xmlContentString = "<valid/>";
+        InputStream xmlContent = new ByteArrayInputStream(xmlContentString.getBytes(UTF_8));
+
+        messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, new MessageContent(xmlContent, 42));
+
+        verify(malwareScanTrigger).triggerScan(eq(messageId.toString()), eq(PARTNER_BUCKET_NAME), any(InputStream.class), anyInt());
+
+        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), any(PublishedScanStatus.class));
+        assertThat(storedMessage).isEqualTo(xmlContentString);
+        assertThat(storedTags)
+                .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
+                .containsEntry("scanStatus", ScanStatus.SCAN_PENDING.name());
 
         verify(messageRepository, never()).save(any(Message.class));
     }
@@ -264,7 +299,7 @@ class MessageExchangeServiceTest {
                 "saveTimeInMillis", saveTimeInMillis
         ));
 
-        S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(ScanResult.NO_THREATS_FOUND, "bucketName", messageId.toString());
+        S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(MalwareScanResult.NO_THREATS_FOUND, "bucketName", messageId.toString());
         messageExchangeService.onMalwareScanResult(internalScanResult);
 
         verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.NO_THREATS_FOUND);
@@ -272,7 +307,7 @@ class MessageExchangeServiceTest {
         assertThat(storedTags).containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis");
         assertThat(storedTags).containsEntry("scanStatus", ScanStatus.NO_THREATS_FOUND.name());
 
-        verify(metricsService, times(1)).publishMetrics(eq(ScanResult.NO_THREATS_FOUND), anyLong(), eq(Long.parseLong(saveTimeInMillis)));
+        verify(metricsService, times(1)).publishMetrics(eq(MalwareScanResult.NO_THREATS_FOUND), anyLong(), eq(Long.parseLong(saveTimeInMillis)));
     }
 
     @Test
@@ -290,7 +325,7 @@ class MessageExchangeServiceTest {
                 // Missing: "saveTimeInMillis", saveTimeInMillis
         ));
 
-        S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(ScanResult.FAILED, "bucketName", messageId.toString());
+        S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(MalwareScanResult.FAILED, "bucketName", messageId.toString());
         messageExchangeService.onMalwareScanResult(internalScanResult);
 
         verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.SCAN_FAILED);
@@ -298,7 +333,7 @@ class MessageExchangeServiceTest {
         assertThat(storedTags).containsKeys("bpId", "messageType", "scanStatus");
         assertThat(storedTags).containsEntry("scanStatus", ScanStatus.SCAN_FAILED.name());
 
-        verify(metricsService, never()).publishMetrics(any(ScanResult.class), anyLong(), anyLong());
+        verify(metricsService, never()).publishMetrics(any(MalwareScanResult.class), anyLong(), anyLong());
     }
 
     @Test
@@ -308,11 +343,11 @@ class MessageExchangeServiceTest {
         this.storedMessage = "<content>test</content>";
         this.storedTags = new HashMap<>();
 
-        S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(ScanResult.NO_THREATS_FOUND, "bucketName", messageId.toString());
+        S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(MalwareScanResult.NO_THREATS_FOUND, "bucketName", messageId.toString());
         assertThrows(IllegalStateException.class, () -> messageExchangeService.onMalwareScanResult(internalScanResult));
 
         verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), any(PublishedScanStatus.class));
 
-        verify(metricsService, never()).publishMetrics(any(ScanResult.class), anyLong(), anyLong());
+        verify(metricsService, never()).publishMetrics(any(MalwareScanResult.class), anyLong(), anyLong());
     }
 }

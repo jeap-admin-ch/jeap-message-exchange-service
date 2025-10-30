@@ -34,52 +34,14 @@ class TopicConfigurationTest {
     @BeforeEach
     void setUp() {
         kafkaAdmin = mock(KafkaAdmin.class);
-        malwareScanProperties = mock(MalwareScanProperties.class);
         messageSentProperties = mock(MessageSentProperties.class);
         topicConfiguration = mock(TopicConfiguration.class);
         adminClient = mock(AdminClient.class);
-        topicConfigurationCloud = new TopicConfiguration.TopicConfigurationCloud(kafkaAdmin, malwareScanProperties, messageSentProperties, topicConfiguration);
+        topicConfigurationCloud = new TopicConfiguration.TopicConfigurationCloud(kafkaAdmin, messageSentProperties, topicConfiguration);
     }
 
     @Test
     void checkIfTopicsExist_allSet_noException() throws Exception {
-        when(malwareScanProperties.isEnabled()).thenReturn(true);
-        when(messageSentProperties.isEnabled()).thenReturn(true);
-
-        when(topicConfiguration.getMessageReceived()).thenReturn("message-received");
-        when(topicConfiguration.getMalwareScanResult()).thenReturn("malware-scan-result");
-        when(topicConfiguration.getMessageSent()).thenReturn("message-sent");
-
-
-        DescribeTopicsResult describeTopicsResult = mock(DescribeTopicsResult.class);
-        KafkaFuture<Map<String, TopicDescription>> kafkaFuture = mock(KafkaFuture.class);
-        when(kafkaFuture.get()).thenReturn(new HashMap<>());
-        when(describeTopicsResult.allTopicNames()).thenReturn(kafkaFuture);
-        when(adminClient.describeTopics(List.of("message-received", "malware-scan-result", "message-sent"))).thenReturn(describeTopicsResult);
-
-        assertDoesNotThrow(() -> topicConfigurationCloud.doCheckIfTopicExists(adminClient));
-        verify(adminClient).describeTopics(List.of("message-received", "malware-scan-result", "message-sent"));
-    }
-
-    @Test
-    void checkIfTopicsExist_allExceptMessageSentSet_noException() throws Exception {
-        when(malwareScanProperties.isEnabled()).thenReturn(true);
-
-        when(topicConfiguration.getMessageReceived()).thenReturn("message-received");
-        when(topicConfiguration.getMalwareScanResult()).thenReturn("malware-scan-result");
-
-        DescribeTopicsResult describeTopicsResult = mock(DescribeTopicsResult.class);
-        KafkaFuture<Map<String, TopicDescription>> kafkaFuture = mock(KafkaFuture.class);
-        when(kafkaFuture.get()).thenReturn(new HashMap<>());
-        when(describeTopicsResult.allTopicNames()).thenReturn(kafkaFuture);
-        when(adminClient.describeTopics(List.of("message-received", "malware-scan-result"))).thenReturn(describeTopicsResult);
-
-        assertDoesNotThrow(() -> topicConfigurationCloud.doCheckIfTopicExists(adminClient));
-        verify(adminClient).describeTopics(List.of("message-received", "malware-scan-result"));
-    }
-
-    @Test
-    void checkIfTopicsExist_allExceptMalwareScanResult_noException() throws Exception {
         when(messageSentProperties.isEnabled()).thenReturn(true);
 
         when(topicConfiguration.getMessageReceived()).thenReturn("message-received");
@@ -97,12 +59,17 @@ class TopicConfigurationTest {
     }
 
     @Test
-    void checkIfTopicsExist_malwareScanResultEnabledTopicNotSet_exception() throws Exception {
-        when(malwareScanProperties.isEnabled()).thenReturn(true);
-
+    void checkIfTopicsExist_allExceptMessageSentSet_noException() throws Exception {
         when(topicConfiguration.getMessageReceived()).thenReturn("message-received");
 
-        assertThrows(IllegalStateException.class, () -> topicConfigurationCloud.doCheckIfTopicExists(adminClient));
+        DescribeTopicsResult describeTopicsResult = mock(DescribeTopicsResult.class);
+        KafkaFuture<Map<String, TopicDescription>> kafkaFuture = mock(KafkaFuture.class);
+        when(kafkaFuture.get()).thenReturn(new HashMap<>());
+        when(describeTopicsResult.allTopicNames()).thenReturn(kafkaFuture);
+        when(adminClient.describeTopics(List.of("message-received"))).thenReturn(describeTopicsResult);
+
+        assertDoesNotThrow(() -> topicConfigurationCloud.doCheckIfTopicExists(adminClient));
+        verify(adminClient).describeTopics(List.of("message-received"));
     }
 
     @Test
@@ -113,5 +80,4 @@ class TopicConfigurationTest {
 
         assertThrows(IllegalStateException.class, () -> topicConfigurationCloud.doCheckIfTopicExists(adminClient));
     }
-
 }

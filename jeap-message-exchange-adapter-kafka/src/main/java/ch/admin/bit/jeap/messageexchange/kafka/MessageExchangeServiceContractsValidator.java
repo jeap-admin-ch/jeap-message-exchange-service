@@ -5,7 +5,6 @@ import ch.admin.bit.jeap.messageexchange.event.message.sent.B2BMessageSentEvent;
 import ch.admin.bit.jeap.messaging.avro.AvroMessageType;
 import ch.admin.bit.jeap.messaging.kafka.contract.ContractsProvider;
 import ch.admin.bit.jeap.messaging.kafka.contract.DefaultContractsValidator;
-import ch.admin.bit.jeap.s3.malware.scanned.S3ObjectMalwareScannedEvent;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -34,9 +33,6 @@ public class MessageExchangeServiceContractsValidator {
     @PostConstruct
     public void checkContracts() {
         defaultContractsValidator.ensurePublisherContract(B2B_MESSAGE_RECEIVED_EVENT, topicConfiguration.getMessageReceived());
-        if (topicConfiguration.getMalwareScanResult() != null) {
-            defaultContractsValidator.ensureConsumerContract(S3ObjectMalwareScannedEvent.getClassSchema().getName(), topicConfiguration.getMalwareScanResult());
-        }
         if (topicConfiguration.getMessageSent() != null) {
             defaultContractsValidator.ensurePublisherContract(B2B_MESSAGE_SENT_EVENT, topicConfiguration.getMessageSent());
         }

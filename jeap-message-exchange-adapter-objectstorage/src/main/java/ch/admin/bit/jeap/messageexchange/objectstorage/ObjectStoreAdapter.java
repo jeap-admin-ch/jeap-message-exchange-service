@@ -73,7 +73,7 @@ public class ObjectStoreAdapter implements ObjectStore {
         return objectStorageRepository.updateTagsAndGetTags(bucketName, objectKey, tagsToUpdate);
     }
 
-    private String getBucketName(BucketType bucketType) {
+    public String getBucketName(BucketType bucketType) {
         if (INTERNAL == bucketType) {
             return this.bucketNameInternal;
         }

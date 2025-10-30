@@ -16,4 +16,5 @@ public interface ObjectStore {
 
     Map<String,String> updateTagsAndGetTags(BucketType bucketType, String bucketName, String objectKey, Map<String, String> tagsToUpdate);
 
+    String getBucketName(BucketType bucketType);
 }

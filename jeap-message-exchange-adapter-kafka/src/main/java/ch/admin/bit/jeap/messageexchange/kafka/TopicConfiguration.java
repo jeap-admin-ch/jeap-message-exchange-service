@@ -1,7 +1,6 @@
 package ch.admin.bit.jeap.messageexchange.kafka;
 
 
-import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.constraints.NotEmpty;
@@ -32,7 +31,6 @@ public class TopicConfiguration {
     @NotEmpty
     private String messageReceived;
     private String messageSent;
-    private String malwareScanResult;
 
     @Configuration
     @Profile("cloud|aws")
@@ -40,7 +38,6 @@ public class TopicConfiguration {
     @SuppressWarnings({"unused", "findbugs:RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"})
     static class TopicConfigurationCloud {
         private final KafkaAdmin kafkaAdmin;
-        private final MalwareScanProperties malwareScanProperties;
         private final MessageSentProperties messageSentProperties;
         private final TopicConfiguration topicConfiguration;
 
@@ -54,12 +51,6 @@ public class TopicConfiguration {
         void doCheckIfTopicExists(AdminClient adminClient) throws InterruptedException, ExecutionException {
             List<String> topics = new ArrayList<>();
             topics.add(topicConfiguration.getMessageReceived());
-            if (malwareScanProperties.isEnabled()) {
-                if (!StringUtils.hasText(topicConfiguration.getMalwareScanResult())) {
-                    throw new IllegalStateException("Malware scan is enabled but no topic is configured");
-                }
-                topics.add(topicConfiguration.getMalwareScanResult());
-            }
             if (messageSentProperties.isEnabled()) {
                 if (!StringUtils.hasText(topicConfiguration.getMessageSent())) {
                     throw new IllegalStateException("Message sent enabled but no topic is configured");

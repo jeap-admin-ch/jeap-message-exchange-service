@@ -1,7 +1,7 @@
 package ch.admin.bit.jeap.messageexchange.metrics;
 
-import ch.admin.bit.jeap.messageexchange.domain.malwarescan.ScanResult;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
+import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanResult;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -17,7 +17,7 @@ import java.util.Map;
 public class MeterRegistryMetricsService implements MetricsService {
 
     private final Timer malwareScanDurationTimer;
-    private final Map<ScanResult, Counter> scanResultsCounter;
+    private final Map<MalwareScanResult, Counter> scanResultsCounter;
 
     public MeterRegistryMetricsService(MeterRegistry meterRegistry, @Value("${spring.application.name}") String applicationName) {
         malwareScanDurationTimer = Timer.builder("jeap_mes_malware_scan_duration_timer")
@@ -25,7 +25,7 @@ public class MeterRegistryMetricsService implements MetricsService {
                 .tags("applicationName", applicationName)
                 .register(meterRegistry);
         scanResultsCounter = new HashMap<>();
-        Arrays.stream(ScanResult.values()).forEach(scanResult ->
+        Arrays.stream(MalwareScanResult.values()).forEach(scanResult ->
                 scanResultsCounter.put(scanResult,
                         Counter.builder("jeap_mes_malware_scan_result_counter")
                                 .description("A counter to track the number of malware scan results")
@@ -36,7 +36,7 @@ public class MeterRegistryMetricsService implements MetricsService {
     }
 
     @Override
-    public void publishMetrics(ScanResult scanResult, long messageArrivalTimeInMillis, Long saveTimeInMillis) {
+    public void publishMetrics(MalwareScanResult scanResult, long messageArrivalTimeInMillis, Long saveTimeInMillis) {
         if (saveTimeInMillis != null) {
             long durationInMillis = messageArrivalTimeInMillis - saveTimeInMillis;
             Duration duration = Duration.ofMillis(durationInMillis);

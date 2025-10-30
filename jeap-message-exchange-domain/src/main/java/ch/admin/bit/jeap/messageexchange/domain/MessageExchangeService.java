@@ -15,6 +15,7 @@ import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTags;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsService;
 import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import ch.admin.bit.jeap.messageexchange.domain.xml.XmlValidatingOutputStream;
+import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanTrigger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -38,6 +39,7 @@ public class MessageExchangeService {
     private final MessageSentProperties messageSentProperties;
     private final MetricsService metricsService;
     private final S3ObjectTagsService tagsService;
+    private final Optional<MalwareScanTrigger> malwareScanTriggerOptional;
 
     public Optional<MessageContent> getMessageFromInternalApplication(String bpId, UUID messageId) {
         String objectKey = createInternalMessageObjectKey(bpId, messageId);
@@ -83,6 +85,9 @@ public class MessageExchangeService {
             if (!malwareScanProperties.isEnabled()) {
                 // Publish ReceivedEvent and events from configured listeners
                 eventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.NOT_SCANNED);
+            } else if (malwareScanTriggerOptional.isPresent()) {
+                malwareScanTriggerOptional.get().triggerScan(messageId.toString(), objectStore.getBucketName(BucketType.PARTNER),
+                        messageContent.inputStream(), messageContent.contentLength());
             }
         }
     }
