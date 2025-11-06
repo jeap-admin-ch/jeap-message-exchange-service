@@ -31,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(classes = TestApp.class, properties = {
-        "spring.flyway.locations=classpath:db/migration/common",
         "spring.application.name=junit"
 })
 @ContextConfiguration(classes = PersistenceConfiguration.class)
