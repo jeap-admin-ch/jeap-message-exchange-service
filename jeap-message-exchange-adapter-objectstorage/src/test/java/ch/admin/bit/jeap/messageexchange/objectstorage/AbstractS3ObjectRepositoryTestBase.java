@@ -10,6 +10,8 @@ import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.http.urlconnection.ProxyConfiguration;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
@@ -47,7 +49,7 @@ public class AbstractS3ObjectRepositoryTestBase {
 
     @SuppressWarnings("resource")
     private static LocalStackContainer createLocalStackContainer() {
-        return new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.1")
+        return new LocalStackContainer(DockerImageName.parse("localstack/localstack:4.10.0")
                 .asCompatibleSubstituteFor("localstack/localstack"))
                 .withEnv("DISABLE_EVENTS", "1") // Disable localstack features that require an internet connection
                 .withEnv("SKIP_INFRA_DOWNLOADS", "1")
@@ -65,6 +67,11 @@ public class AbstractS3ObjectRepositoryTestBase {
                 .region(Region.of(localStack.getRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
                 .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
+                .httpClientBuilder(UrlConnectionHttpClient.builder()
+                        .proxyConfiguration(ProxyConfiguration.builder()
+                                .useSystemPropertyValues(false)
+                                .useEnvironmentVariablesValues(false)
+                                .build()))
                 .build();
         setupStorage();
     }

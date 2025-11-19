@@ -34,7 +34,13 @@ import static org.mockito.Mockito.when;
         webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
         properties = {
                 "jeap.security.oauth2.resourceserver.authorization-server.issuer=http://localhost/auth",
-                "jeap.security.oauth2.resourceserver.authorization-server.jwk-set-uri=http://localhost:1235/jme-message-exchange-service/.well-known/jwks.json"
+                "jeap.security.oauth2.resourceserver.authorization-server.jwk-set-uri=http://localhost:1235/jme-message-exchange-service/.well-known/jwks.json",
+                "spring.cloud.aws.sqs.enabled=false",
+                "spring.cloud.aws.parameterstore.enabled=false",
+                "spring.cloud.aws.secretsmanager.enabled=false",
+                "spring.cloud.aws.credentials.accessKey=dummy",
+                "spring.cloud.aws.credentials.secretKey=dummy",
+                "aws.region.static=eu-central-1"
         })
 @ActiveProfiles({"pact-provider-test"})
 @Provider(MESSAGE_EXCHANGE)

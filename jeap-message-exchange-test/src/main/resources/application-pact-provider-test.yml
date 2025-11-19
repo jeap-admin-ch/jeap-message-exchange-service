@@ -27,6 +27,8 @@ jeap:
         access-url: http://localhost:9000
         access-key: local
         secret-key: localsecret
+    malwarescan:
+      enabled: false
 
   messaging:
     kafka:

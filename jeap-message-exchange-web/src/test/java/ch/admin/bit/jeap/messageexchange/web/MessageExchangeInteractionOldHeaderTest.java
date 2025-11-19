@@ -35,10 +35,6 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
@@ -48,6 +44,8 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
+import static ch.admin.bit.jeap.messageexchange.web.LocalStackTestSupport.createLocalStackContainer;
+import static ch.admin.bit.jeap.messageexchange.web.LocalStackTestSupport.createS3Client;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -138,14 +136,6 @@ class MessageExchangeInteractionOldHeaderTest extends KafkaIntegrationTestBase {
             .operation("read")
             .build();
 
-    private static LocalStackContainer createLocalStackContainer() {
-        return new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.1")
-                .asCompatibleSubstituteFor("localstack/localstack"))
-                .withEnv("DISABLE_EVENTS", "1") // Disable localstack features that require an internet connection
-                .withEnv("SKIP_INFRA_DOWNLOADS", "1")
-                .withEnv("SKIP_SSL_CERT_DOWNLOAD", "1");
-    }
-
     @DynamicPropertySource
     static void dynamicProperties(DynamicPropertyRegistry registry) {
         registry.add("jeap.messageexchange.objectstorage.connection.region", () -> localStack.getRegion());
@@ -159,11 +149,7 @@ class MessageExchangeInteractionOldHeaderTest extends KafkaIntegrationTestBase {
 
     @BeforeAll
     static void createBucket() {
-        S3Client s3Client = S3Client.builder()
-                .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3)) // LocalStack endpoint
-                .region(Region.of(localStack.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
-                .build();
+        S3Client s3Client = createS3Client(localStack);
         CreateBucketRequest createPartnerBucketRequest = CreateBucketRequest.builder()
                 .bucket("test-bucket-partner")
                 .build();
