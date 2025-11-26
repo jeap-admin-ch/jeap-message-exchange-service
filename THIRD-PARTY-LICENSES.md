@@ -16,7 +16,7 @@ Apache License Version 2.0
  * junit5 - [au.com.dius.pact.provider:junit5](https://github.com/pact-foundation/pact-jvm)
  * ch.admin.bit.jeap:jeap-crypto-core - [ch.admin.bit.jeap:jeap-crypto-core](https://github.com/jeap-admin-ch/jeap-crypto/tree/main/jeap-crypto-core)
  * ch.admin.bit.jeap:jeap-message-exchange-adapter-kafka - [ch.admin.bit.jeap:jeap-message-exchange-adapter-kafka](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-adapter-kafka)
- * ch.admin.bit.jeap:jeap-message-exchange-adapter-malware-nivel-s3 - [ch.admin.bit.jeap:jeap-message-exchange-adapter-malware-nivel-s3](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-adapter-malware-nivel-s3)
+ * ch.admin.bit.jeap:jeap-message-exchange-adapter-malware-aws-s3 - [ch.admin.bit.jeap:jeap-message-exchange-adapter-malware-aws-s3](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-adapter-malware-aws-s3)
  * ch.admin.bit.jeap:jeap-message-exchange-adapter-metrics - [ch.admin.bit.jeap:jeap-message-exchange-adapter-metrics](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-adapter-metrics)
  * ch.admin.bit.jeap:jeap-message-exchange-adapter-objectstorage - [ch.admin.bit.jeap:jeap-message-exchange-adapter-objectstorage](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-adapter-objectstorage)
  * ch.admin.bit.jeap:jeap-message-exchange-domain - [ch.admin.bit.jeap:jeap-message-exchange-domain](https://github.com/jeap-admin-ch/jeap-message-exchange-service/tree/main/jeap-message-exchange-domain)
