@@ -2,7 +2,9 @@ package ch.admin.bit.jeap.messageexchange.web.api;
 
 import ch.admin.bit.jeap.messageexchange.domain.Message;
 import ch.admin.bit.jeap.messageexchange.domain.MessageExchangeService;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.MissingRequiredHeaderException;
+import ch.admin.bit.jeap.messageexchange.web.api.exception.UnsupportedMediaTypeException;
 import ch.admin.bit.jeap.messageexchange.web.api.mdc.MessageIdBpIdMdcCloseable;
 import ch.admin.bit.jeap.messageexchange.web.api.stream.ControllerStreams;
 import io.micrometer.core.annotation.Timed;
@@ -16,8 +18,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -31,21 +33,19 @@ import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
 import static ch.admin.bit.jeap.messageexchange.web.api.LegacyHeaderHelper.checkVariables;
 
 @RestController
-@RequestMapping("/api/internal/v2/messages")
+@RequestMapping("/api/internal/v3/messages")
 @RequiredArgsConstructor
 @Slf4j
 @Validated
-@Deprecated // replaced by MessageInternalV3Controller
-public class MessageInternalController {
+public class MessageInternalV3Controller {
 
     private final MessageExchangeService messageExchangeService;
     private final ControllerStreams controllerStreams;
 
-    @PutMapping(value = "/{messageId}", consumes = MediaType.APPLICATION_XML_VALUE)
+    @PutMapping(value = "/{messageId}")
     @Operation(summary = "Sends a new message to a business partner",
-            requestBody = @RequestBody(description = "XML message",
-                    required = true, content = @Content(mediaType = MediaType.APPLICATION_XML_VALUE,
-                    schema = @Schema(name = "anyxml"))))
+            requestBody = @RequestBody(description = "Message",
+                    required = true, content = @Content(mediaType = "*/*", schema = @Schema(name = "string"))))
     @PreAuthorize(Roles.HAS_ROLE_WRITE_MESSAGE_OUT)
     @Timed(value = "jeap_mes_internal_controller_send_message", description = "Time taken to send a message", percentiles = {0.5, 0.8, 0.95, 0.99})
     public ResponseEntity<Void> sendMessage(
@@ -58,8 +58,10 @@ public class MessageInternalController {
             @RequestHeader(value = HEADER_MESSAGE_TYPE_OLD, required = false) @Parameter(description = "Business type definition of the message body") String messageTypeOld,
             @RequestHeader(value = HEADER_PARTNER_TOPIC, required = false) @Parameter(description = "Partner Topic") String partnerTopic,
             @RequestHeader(value = HEADER_PARTNER_TOPIC_OLD, required = false) @Parameter(description = "Partner Topic") String partnerTopicOld,
-            HttpServletRequest request) throws IOException, MissingRequiredHeaderException {
+            @RequestHeader(HttpHeaders.CONTENT_TYPE) @Parameter(description = "Content-Type of the message body") String contentTypeHeader,
+            HttpServletRequest request) throws IOException, MissingRequiredHeaderException, UnsupportedMediaTypeException {
 
+        String contentType = controllerStreams.validateContentType(contentTypeHeader);
         bpId = checkVariables(bpId, bpIdOld, HEADER_BP_ID_OLD, HEADER_BP_ID, true);
         messageType = checkVariables(messageType, messageTypeOld, HEADER_MESSAGE_TYPE_OLD, HEADER_MESSAGE_TYPE, true);
         partnerTopic = checkVariables(partnerTopic, partnerTopicOld, HEADER_PARTNER_TOPIC_OLD, HEADER_PARTNER_TOPIC, false);
@@ -72,27 +74,28 @@ public class MessageInternalController {
                     .groupId(groupId)
                     .messageType(messageType)
                     .partnerTopic(partnerTopic)
-                    .contentType(MediaType.APPLICATION_XML_VALUE)
+                    .contentType(contentType)
                     .build();
 
             log.info("Send new message {} with size {} to partner", message, request.getContentLength());
 
-            messageExchangeService.saveNewMessageFromInternalApplicationLegacy(message, controllerStreams.getRequestContent(request));
+            messageExchangeService.saveNewMessageFromInternalApplication(message, controllerStreams.getRequestContent(request));
             log.debug("Message with messageId {} successfully saved", messageId);
             return new ResponseEntity<>(HttpStatus.CREATED);
         }
     }
 
-    @GetMapping(value = "/{messageId}", produces = MediaType.APPLICATION_XML_VALUE)
+    @GetMapping(value = "/{messageId}")
     @Operation(summary = "Receive a message from a partner with the messageId",
             responses = @ApiResponse(responseCode = "403", description = "Not delivering because of the malware scan status")
     )
     @PreAuthorize(Roles.HAS_ROLE_READ_MESSAGE_IN)
     @Timed(value = "jeap_mes_internal_controller_get_message", description = "Time taken to retrieve a message", percentiles = {0.5, 0.8, 0.95, 0.99})
-    public ResponseEntity<InputStreamResource> getMessage(@PathVariable("messageId") @Parameter(description = "Message identification as UUID 12345678-1234-1234-1234-123456789012") UUID messageId) {
+    public ResponseEntity<InputStreamResource> getMessage(@PathVariable("messageId") @Parameter(description = "Message identification as UUID 12345678-1234-1234-1234-123456789012") UUID messageId,
+                                                          @RequestHeader(HttpHeaders.ACCEPT) @Parameter(description = "Content-Type of the message body") String accept) throws MismatchedContentTypeException {
         try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageId(messageId)) {
             log.debug("Received get message request for messageId {}", messageId);
-            return messageExchangeService.getMessageFromPartner(messageId)
+            return messageExchangeService.getMessageFromPartner(messageId, accept)
                     .map(ControllerStreams::toResponseEntityWithoutResponseHeaders)
                     .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
         }

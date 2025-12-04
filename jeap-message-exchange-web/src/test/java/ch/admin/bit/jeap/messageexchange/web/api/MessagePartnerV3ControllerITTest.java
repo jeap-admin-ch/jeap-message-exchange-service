@@ -343,8 +343,8 @@ class MessagePartnerV3ControllerITTest {
         UUID message1Id = UUID.randomUUID();
         UUID message2Id = UUID.randomUUID();
         when(messageExchangeService.getMessages(bpId, null, null, null, null, 1000))
-                .thenReturn(List.of(new MessageSearchResultDto(message1Id, "type1", null, null),
-                        new MessageSearchResultDto(message2Id, "type2", "groupdId2", "partnerTopic2")));
+                .thenReturn(List.of(new MessageSearchResultDto(message1Id, "type1", MediaType.APPLICATION_XML_VALUE, null, null),
+                        new MessageSearchResultDto(message2Id, "type2", MediaType.APPLICATION_XML_VALUE, "groupdId2", "partnerTopic2")));
 
         mockMvc.perform(
                         get("/api/partner/v3/messages/")
@@ -370,7 +370,7 @@ class MessagePartnerV3ControllerITTest {
         int size = 3;
 
         when(messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, size))
-                .thenReturn(List.of(new MessageSearchResultDto(messageId, "type", null, null)));
+                .thenReturn(List.of(new MessageSearchResultDto(messageId, "type", MediaType.APPLICATION_XML_VALUE, null, null)));
 
         mockMvc.perform(
                         get("/api/partner/v3/messages")

@@ -23,7 +23,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 public class JdbcMessageRepository implements MessageRepository {
-    private static final String INSERT_SQL = "INSERT INTO b2bhub_db_table(\"messageId\",\"bpId\",\"topicName\",\"groupId\",\"messageType\",\"datePublished\",\"partnerTopic\") VALUES (:messageId,:bpId,:topicName,:groupId,:messageType,:datePublished,:partnerTopic)";
+    private static final String INSERT_SQL = "INSERT INTO b2bhub_db_table(\"messageId\",\"bpId\",\"topicName\",\"groupId\",\"messageType\",\"datePublished\",\"partnerTopic\",\"contentType\") VALUES (:messageId,:bpId,:topicName,:groupId,:messageType,:datePublished,:partnerTopic,:contentType)";
     private static final String SELECT_BY_MESSAGE_ID = "SELECT * FROM b2bhub_db_table WHERE \"messageId\" = :messageId";
     private static final String SELECT_SEQUENCE_ID_OF_MESSAGE = "SELECT \"sequenceId\" FROM b2bhub_db_table WHERE \"bpId\" = :bpId AND \"messageId\" = :messageId";
     private static final String SELECT_NEXT_MESSAGE_ID_AFTER_SEQUENCE_ID = """
@@ -37,7 +37,7 @@ public class JdbcMessageRepository implements MessageRepository {
             """;
 
     private static final String SELECT_NEXT_MESSAGES = """
-                SELECT t."messageId", t."messageType", t."groupId", t."partnerTopic" FROM b2bhub_db_table t
+                SELECT t."messageId", t."messageType", t."groupId", t."partnerTopic", t."contentType"  FROM b2bhub_db_table t
                 WHERE t."bpId" = :bpId
                     %s
                     %s
@@ -58,6 +58,7 @@ public class JdbcMessageRepository implements MessageRepository {
     private static final String SEQUENCE_ID = "sequenceId";
     private static final String MESSAGE_TYPE = "messageType";
     private static final String PARTNER_TOPIC = "partnerTopic";
+    private static final String CONTENT_TYPE = "contentType";
     private static final String DATE_PUBLISHED = "datePublished";
     private static final String GROUP_ID = "groupId";
     private static final String TOPIC_NAME = "topicName";
@@ -79,6 +80,7 @@ public class JdbcMessageRepository implements MessageRepository {
         params.addValue(PARTNER_TOPIC, message.getPartnerTopic());
         params.addValue(TOPIC_NAME, message.getTopicName());
         params.addValue(GROUP_ID, message.getGroupId());
+        params.addValue(CONTENT_TYPE, message.getContentType());
 
         try {
             jdbcTemplate.update(INSERT_SQL, params);
@@ -102,7 +104,8 @@ public class JdbcMessageRepository implements MessageRepository {
                                 rs.getString(GROUP_ID),
                                 rs.getString(MESSAGE_TYPE),
                                 rs.getObject(DATE_PUBLISHED, LocalDateTime.class),
-                                rs.getString(PARTNER_TOPIC)
+                                rs.getString(PARTNER_TOPIC),
+                                rs.getString(CONTENT_TYPE)
                         )
         ).stream().findFirst();
     }
@@ -148,6 +151,7 @@ public class JdbcMessageRepository implements MessageRepository {
                         new MessageSearchResultDto(
                                 UUID.fromString(rs.getString(MESSAGE_ID)),
                                 rs.getString(MESSAGE_TYPE),
+                                rs.getString(CONTENT_TYPE),
                                 rs.getString(GROUP_ID),
                                 rs.getString(PARTNER_TOPIC)
                         )

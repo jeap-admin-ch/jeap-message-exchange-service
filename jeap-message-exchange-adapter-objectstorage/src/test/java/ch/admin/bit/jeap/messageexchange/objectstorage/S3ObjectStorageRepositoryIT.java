@@ -3,6 +3,7 @@ package ch.admin.bit.jeap.messageexchange.objectstorage;
 import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -28,7 +29,7 @@ class S3ObjectStorageRepositoryIT extends AbstractS3ObjectRepositoryTestBase {
         String objectKey = "test-object-key";
         byte[] objectContent = "test-object-content".getBytes(UTF_8);
         MessageContent messageContent = new MessageContent(new ByteArrayInputStream(objectContent), objectContent.length);
-        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, messageContent);
+        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, messageContent, MediaType.APPLICATION_XML_VALUE);
 
         GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(TEST_BUCKET_NAME).key(objectKey).build();
         ResponseBytes<GetObjectResponse> objectAsBytes = s3Client.getObject(getObjectRequest, ResponseTransformer.toBytes());
@@ -54,7 +55,7 @@ class S3ObjectStorageRepositoryIT extends AbstractS3ObjectRepositoryTestBase {
                 "saveTimeInMillis", String.valueOf(saveTimeInMillis)
         );
         MessageContent messageContent = new MessageContent(new ByteArrayInputStream(objectContent), objectContent.length, tags);
-        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, messageContent);
+        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, messageContent, MediaType.APPLICATION_XML_VALUE);
 
         Optional<MessageContent> objectWithTags = s3ObjectStorageRepository.getObjectWithTags(TEST_BUCKET_NAME, objectKey);
         assertThat(objectWithTags).isPresent();
@@ -68,9 +69,9 @@ class S3ObjectStorageRepositoryIT extends AbstractS3ObjectRepositoryTestBase {
         final byte[] objectContent2 = "test-object-content2".getBytes(UTF_8);
 
         MessageContent messageContent1 = new MessageContent(new ByteArrayInputStream(objectContent1), objectContent1.length);
-        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, messageContent1);
+        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, messageContent1, MediaType.APPLICATION_XML_VALUE);
         MessageContent messageContent2 = new MessageContent(new ByteArrayInputStream(objectContent2), objectContent2.length);
-        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, messageContent2);
+        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, messageContent2, MediaType.APPLICATION_XML_VALUE);
 
         GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(TEST_BUCKET_NAME).key(objectKey).build();
         ResponseBytes<GetObjectResponse> objectAsBytes = s3Client.getObject(getObjectRequest, ResponseTransformer.toBytes());
@@ -84,7 +85,7 @@ class S3ObjectStorageRepositoryIT extends AbstractS3ObjectRepositoryTestBase {
         String objectKey = "test-object-key";
         byte[] objectContent = "test-object-content".getBytes(UTF_8);
         MessageContent putMessageContent = new MessageContent(new ByteArrayInputStream(objectContent), objectContent.length);
-        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, putMessageContent);
+        s3ObjectStorageRepository.putObject(TEST_BUCKET_NAME, objectKey, putMessageContent, MediaType.APPLICATION_XML_VALUE);
 
         Optional<MessageContent> optionalMessageContent = s3ObjectStorageRepository.getObject(TEST_BUCKET_NAME, objectKey);
 

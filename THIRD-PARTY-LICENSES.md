@@ -8,6 +8,7 @@ Third-party dependencies grouped by their license type (see [pom.xml](/pom.xml) 
 Apache License Version 2.0
 -------------------------------
 
+ * LZ4 Java Compression - [at.yawk.lz4:lz4-java](https://github.com/lz4/lz4-java)
  * provider - [au.com.dius.pact:provider](https://github.com/pact-foundation/pact-jvm)
  * matchers - [au.com.dius.pact.core:matchers](https://github.com/pact-foundation/pact-jvm)
  * model - [au.com.dius.pact.core:model](https://github.com/pact-foundation/pact-jvm)
@@ -48,7 +49,7 @@ Apache License Version 2.0
  * ch.admin.bit.jeap:jeap-spring-boot-swagger - [ch.admin.bit.jeap:jeap-spring-boot-swagger](https://github.com/jeap-admin-ch/jeap-spring-boot-starters/tree/main/jeap-spring-boot-swagger)
  * ch.admin.bit.jeap:jeap-spring-boot-swagger-starter - [ch.admin.bit.jeap:jeap-spring-boot-swagger-starter](https://github.com/jeap-admin-ch/jeap-spring-boot-starters/tree/main/jeap-spring-boot-swagger-starter)
  * ch.admin.bit.jeap:jeap-spring-boot-tx - [ch.admin.bit.jeap:jeap-spring-boot-tx](https://github.com/jeap-admin-ch/jeap-spring-boot-starters/tree/main/jeap-spring-boot-tx)
- * b2-b-message-received-event - ch.admin.bit.jeap.messagetype.jeap:b2-b-message-received-event
+ * ch.admin.bit.jeap.messagetype.jeap:b2-b-message-received-event - [ch.admin.bit.jeap.messagetype.jeap:b2-b-message-received-event](https://github.com/jeap-admin-ch/jeap-message-type-registry/tree/main)
  * ch.admin.bit.jeap.messagetype.jeap:b2-b-message-sent-event - [ch.admin.bit.jeap.messagetype.jeap:b2-b-message-sent-event](https://github.com/jeap-admin-ch/jeap-message-type-registry/tree/main)
  * s3-object-malware-scanned-event - ch.admin.bit.jeap.messagetype.jeap:s3-object-malware-scanned-event
  * AWS SDK for Java - Core - [com.amazonaws:aws-java-sdk-core](https://aws.amazon.com/sdkforjava)
@@ -281,7 +282,6 @@ Apache License Version 2.0
  * kotlinx-datetime - [org.jetbrains.kotlinx:kotlinx-datetime-jvm](https://github.com/Kotlin/kotlinx-datetime)
  * kotlinx-serialization-core - [org.jetbrains.kotlinx:kotlinx-serialization-core-jvm](https://github.com/Kotlin/kotlinx.serialization)
  * JSpecify annotations - [org.jspecify:jspecify](http://jspecify.org/)
- * LZ4 and xxHash - [org.lz4:lz4-java](https://github.com/lz4/lz4-java)
  * Objenesis - [org.objenesis:objenesis](http://objenesis.org/objenesis)
  * org.opentest4j:opentest4j - [org.opentest4j:opentest4j](https://github.com/ota4j-team/opentest4j)
  * Java archiving library - [org.rauschig:jarchivelib](http://rauschig.org/jarchivelib)

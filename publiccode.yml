@@ -25,7 +25,7 @@ description:
       and retrieving messages, with built-in support for partner-specific roles and tenant
       security. The Message Exchange Service manages message
       storage in databases and S3 object storage, includes configurable housekeeping,
-      supports optional fallback buckets, and offers integration with AWS-based malware
+      and offers integration with AWS-based malware
       scanning to block infected messages before delivery. It exposes detailed operational
       metrics for HTTP, database, and S3 operations to facilitate monitoring and ensures
       consistent, standardized deployment aligned with other jEAP microservices.

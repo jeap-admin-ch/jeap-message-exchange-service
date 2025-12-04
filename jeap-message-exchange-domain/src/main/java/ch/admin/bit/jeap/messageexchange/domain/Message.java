@@ -30,8 +30,10 @@ public class Message {
 
     private String partnerTopic;
 
+    private String contentType;
+
     @Builder
-    private Message(@NonNull String bpId, String groupId, @NonNull UUID messageId, @NonNull String messageType, LocalDateTime overrideCreatedAt, String partnerTopic, @NonNull String topicName) {
+    private Message(@NonNull String bpId, String groupId, @NonNull UUID messageId, @NonNull String messageType, LocalDateTime overrideCreatedAt, String partnerTopic, @NonNull String topicName, @NonNull String contentType) {
         this.bpId = bpId;
         this.datePublished = Objects.requireNonNullElseGet(overrideCreatedAt, LocalDateTime::now);
         this.groupId = groupId;
@@ -39,6 +41,7 @@ public class Message {
         this.messageType = messageType;
         this.partnerTopic = partnerTopic;
         this.topicName = topicName;
+        this.contentType = contentType;
     }
 
     @Override
@@ -54,6 +57,7 @@ public class Message {
         sb.append(", messageType='").append(messageType).append('\'');
         sb.append(", datePublished=").append(datePublished);
         sb.append(", partnerTopic='").append(partnerTopic).append('\'');
+        sb.append(", contentType='").append(contentType).append('\'');
         sb.append('}');
         return sb.toString();
     }

@@ -33,11 +33,10 @@ public class KafkaEventPublisher implements EventPublisher {
     private final List<MessageReceivedListener> messageReceivedListeners;
 
     @Override
-    public void publishMessageReceivedEvent(UUID messageId, String bpId, String type, PublishedScanStatus externalPublishedScanStatus) {
-
+    public void publishMessageReceivedEvent(UUID messageId, String bpId, String type, PublishedScanStatus externalPublishedScanStatus, String contentType) {
         List<CompletableFuture<SendResult<AvroMessageKey, AvroMessage>>> sendResults = new ArrayList<>();
         S3ObjectMalwareScanStatus scanStatus = mapStatus(externalPublishedScanStatus);
-        MessageResult b2BMessageReceivedEvent = getB2BMessageReceivedEvent(messageId, bpId, type, scanStatus);
+        MessageResult b2BMessageReceivedEvent = getB2BMessageReceivedEvent(messageId, bpId, type, scanStatus, contentType);
         log.debug("Publishing event {} to topic {}.", b2BMessageReceivedEvent, b2BMessageReceivedEvent.topicName());
         sendResults.add(kafkaTemplate.send(b2BMessageReceivedEvent.topicName(), b2BMessageReceivedEvent.message()));
 
@@ -61,12 +60,13 @@ public class KafkaEventPublisher implements EventPublisher {
         kafkaTemplate.send(topicName, messageSentEvent);
     }
 
-    private MessageResult getB2BMessageReceivedEvent(UUID messageId, String bpId, String type, S3ObjectMalwareScanStatus scanStatus) {
+    private MessageResult getB2BMessageReceivedEvent(UUID messageId, String bpId, String type, S3ObjectMalwareScanStatus scanStatus, String contentType) {
         B2BMessageReceivedEvent messageReceivedEvent = B2BMessageReceivedEventBuilder.create()
                 .bpId(bpId)
                 .messageId(messageId.toString())
                 .type(type)
                 .scanStatus(scanStatus)
+                .contentType(contentType)
                 .systemName(kafkaProperties.getSystemName())
                 .serviceName(kafkaProperties.getServiceName())
                 .idempotenceId(messageId.toString())
@@ -80,6 +80,7 @@ public class KafkaEventPublisher implements EventPublisher {
                 .bpId(message.getBpId())
                 .messageId(message.getMessageId().toString())
                 .type(message.getMessageType())
+                .contentType(message.getContentType())
                 .topicName(message.getTopicName())
                 .groupId(message.getGroupId())
                 .partnerTopic(message.getPartnerTopic())

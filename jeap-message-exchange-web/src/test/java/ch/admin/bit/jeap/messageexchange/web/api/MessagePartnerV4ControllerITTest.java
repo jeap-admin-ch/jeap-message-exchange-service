@@ -4,6 +4,7 @@ import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.domain.MessageExchangeService;
 import ch.admin.bit.jeap.messageexchange.domain.NextMessageResultDto;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
 import ch.admin.bit.jeap.security.resource.semanticAuthentication.SemanticApplicationRole;
 import ch.admin.bit.jeap.security.resource.token.JeapAuthenticationToken;
@@ -27,7 +28,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static ch.admin.bit.jeap.messageexchange.web.api.DeprecatedHeaderNames.HEADER_MESSAGE_ID_OLD;
 import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.Mockito.*;
@@ -37,12 +37,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SuppressWarnings("deprecation")
-@WebMvcTest(controllers = {MessagePartnerV2Controller.class})
+@WebMvcTest(controllers = {MessagePartnerV4Controller.class}, properties = {
+        "jeap.messageexchange.api.media-types=application/xml,application/yaml",
+})
 @ActiveProfiles("controller-test")
 @ContextConfiguration(classes = RestApiTestContext.class)
 @AutoConfigureMockMvc
-class MessagePartnerV2ControllerITTest {
+class MessagePartnerV4ControllerITTest {
 
     @MockitoBean
     private MessageExchangeService messageExchangeService;
@@ -72,7 +73,32 @@ class MessagePartnerV2ControllerITTest {
                 .andExpect(status().isCreated());
 
         verify(messageExchangeService, times(1))
-                .saveNewMessageFromPartner(eq(messageId), eq(bpId), eq("messageType"), any());
+                .saveNewMessageFromPartner(eq(messageId), eq(bpId), eq("messageType"), any(), eq(MediaType.APPLICATION_XML_VALUE));
+    }
+
+    @Test
+    void putNewMessage_whenValidContentType_thenReturnsCreated() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        String bpId = UUID.randomUUID().toString();
+        String messageType = "messageType";
+
+        performPutMessage(messageId.toString(), bpId, messageType, XML_CONTENT, createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE), MediaType.APPLICATION_YAML_VALUE)
+                .andExpect(status().isCreated());
+
+        verify(messageExchangeService, times(1))
+                .saveNewMessageFromPartner(eq(messageId), eq(bpId), eq("messageType"), any(), eq(MediaType.APPLICATION_YAML_VALUE));
+    }
+
+    @Test
+    void putNewMessage_whenInvalidContentType_thenReturnsNotAcceptable() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        String bpId = UUID.randomUUID().toString();
+        String messageType = "messageType";
+
+        performPutMessage(messageId.toString(), bpId, messageType, XML_CONTENT, createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE), MediaType.APPLICATION_JSON_VALUE)
+                .andExpect(status().isNotAcceptable());
+
+        verify(messageExchangeService, never()).saveNewMessageFromPartner(eq(messageId), eq(bpId), anyString(), any(), anyString());
     }
 
     @Test
@@ -144,22 +170,27 @@ class MessagePartnerV2ControllerITTest {
         String messageType = "messageType";
         String xmlContent = "dummy";
         doThrow(InvalidXMLInputException.invalid(UUID.randomUUID(), bpId, mock(XMLStreamException.class)))
-                .when(messageExchangeService).saveNewMessageFromPartner(eq(messageId), eq(bpId), eq(messageType), any());
+                .when(messageExchangeService).saveNewMessageFromPartner(eq(messageId), eq(bpId), eq(messageType), any(), anyString());
 
         performPutMessage(messageId.toString(), bpId, messageType, xmlContent, createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))
                 .andExpect(status().isBadRequest());
     }
 
     @SneakyThrows
-    private ResultActions performPutMessage(String messageId, String bpId, String messageType, String xmlContent, Authentication authentication) {
+    private ResultActions performPutMessage(String messageId, String bpId, String messageType, String xmlContent, Authentication authentication, String contentType) {
         return mockMvc.perform(
-                put("/api/partner/v2/messages/{messageId}", messageId)
+                put("/api/partner/v4/messages/{messageId}", messageId)
                         .header(HEADER_BP_ID, bpId)
                         .header(HEADER_MESSAGE_TYPE, messageType)
-                        .contentType(MediaType.APPLICATION_XML_VALUE)
+                        .contentType(contentType)
                         .content(xmlContent)
                         .with(csrf()) // needed because in this test no bearer token is provided, just the final Spring authentication
                         .with(authentication(authentication)));
+    }
+
+    @SneakyThrows
+    private ResultActions performPutMessage(String messageId, String bpId, String messageType, String xmlContent, Authentication authentication) {
+        return performPutMessage(messageId, bpId, messageType, xmlContent, authentication, MediaType.APPLICATION_XML_VALUE);
     }
 
     @Test
@@ -167,7 +198,7 @@ class MessagePartnerV2ControllerITTest {
         UUID messageId = UUID.randomUUID();
 
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}", messageId)
+                        get("/api/partner/v4/messages/{messageId}", messageId)
                                 .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(UUID.randomUUID().toString(), B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isBadRequest());
@@ -180,9 +211,9 @@ class MessagePartnerV2ControllerITTest {
         UUID messageId = UUID.randomUUID();
         String bpId = UUID.randomUUID().toString();
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}", messageId)
+                        get("/api/partner/v4/messages/{messageId}", messageId)
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
+                                .accept(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
@@ -194,9 +225,9 @@ class MessagePartnerV2ControllerITTest {
         UUID messageId = UUID.randomUUID();
         String bpId = UUID.randomUUID().toString();
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}", messageId)
+                        get("/api/partner/v4/messages/{messageId}", messageId)
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
+                                .accept(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForUserRoles(B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
@@ -207,9 +238,9 @@ class MessagePartnerV2ControllerITTest {
     void getMessage_wrongBpId_thenReturnsForbidden() throws Exception {
         UUID messageId = UUID.randomUUID();
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}", messageId)
+                        get("/api/partner/v4/messages/{messageId}", messageId)
                                 .header(HEADER_BP_ID, UUID.randomUUID())
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
+                                .accept(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles("dummy", B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isForbidden());
 
@@ -220,7 +251,7 @@ class MessagePartnerV2ControllerITTest {
     void getMessage_withoutAuthentication_thenReturnsUnauthorized() throws Exception {
         UUID messageId = UUID.randomUUID();
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}", messageId)
+                        get("/api/partner/v4/messages/{messageId}", messageId)
                                 .header(HEADER_BP_ID, UUID.randomUUID().toString())
                                 .contentType(MediaType.APPLICATION_XML_VALUE))
                 .andExpect(status().isUnauthorized());
@@ -233,13 +264,13 @@ class MessagePartnerV2ControllerITTest {
         UUID messageId = UUID.randomUUID();
         String requestBpId = UUID.randomUUID().toString(); // any business partner id
         MessageContent messageContent = new MessageContent(new ByteArrayInputStream("123".getBytes(UTF_8)), 3);
-        when(messageExchangeService.getMessageFromInternalApplication(requestBpId, messageId))
+        when(messageExchangeService.getMessageFromInternalApplication(requestBpId, messageId, MediaType.APPLICATION_XML_VALUE))
                 .thenReturn(Optional.of(messageContent));
 
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}", messageId)
+                        get("/api/partner/v4/messages/{messageId}", messageId)
                                 .header(HEADER_BP_ID, requestBpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
+                                .accept(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForUserRoles(B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isOk());
     }
@@ -249,18 +280,50 @@ class MessagePartnerV2ControllerITTest {
         UUID messageId = UUID.randomUUID();
         String bpId = UUID.randomUUID().toString();
         MessageContent messageContent = new MessageContent(new ByteArrayInputStream("123".getBytes(UTF_8)), 3);
-        when(messageExchangeService.getMessageFromInternalApplication(bpId, messageId))
+        when(messageExchangeService.getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE))
                 .thenReturn(Optional.of(messageContent));
 
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}", messageId)
+                        get("/api/partner/v4/messages/{messageId}", messageId)
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
+                                .accept(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isOk());
 
         verify(messageExchangeService, times(1))
-                .getMessageFromInternalApplication(bpId, messageId);
+                .getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE);
+    }
+
+    @Test
+    void getMessage_whenAcceptHeaderNotPresent_thenReturnsBadRequest() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        String bpId = UUID.randomUUID().toString();
+        MessageContent messageContent = new MessageContent(new ByteArrayInputStream("123".getBytes(UTF_8)), 3);
+        when(messageExchangeService.getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE))
+                .thenReturn(Optional.of(messageContent));
+
+        mockMvc.perform(
+                        get("/api/partner/v4/messages/{messageId}", messageId)
+                                .header(HEADER_BP_ID, bpId)
+                                .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
+                .andExpect(status().isBadRequest());
+
+        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(), anyString());
+    }
+
+    @Test
+    void getMessage_whenContentTypeMismatch_thenReturnsNotAcceptable() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        String bpId = UUID.randomUUID().toString();
+        when(messageExchangeService.getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_JSON_VALUE))
+                .thenThrow(MismatchedContentTypeException.requestedContentTypeIncorrect(messageId, bpId, MediaType.APPLICATION_JSON_VALUE));
+
+        mockMvc.perform(
+                        get("/api/partner/v4/messages/{messageId}", messageId)
+                                .header(HEADER_BP_ID, bpId)
+                                .accept(MediaType.APPLICATION_JSON_VALUE)
+                                .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
+                .andExpect(status().isNotAcceptable());
     }
 
     @Test
@@ -269,21 +332,20 @@ class MessagePartnerV2ControllerITTest {
         String bpId = UUID.randomUUID().toString();
 
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}", messageId)
+                        get("/api/partner/v4/messages/{messageId}", messageId)
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
+                                .accept(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isNotFound());
 
         verify(messageExchangeService, times(1))
-                .getMessageFromInternalApplication(bpId, messageId);
+                .getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE);
     }
 
     @Test
     void getMessages_bpIdMissing_thenReturnsBadRequest() throws Exception {
         mockMvc.perform(
-                        get("/api/partner/v2/messages")
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
+                        get("/api/partner/v4/messages")
                                 .with(authentication(createAuthenticationForBpRoles(UUID.randomUUID().toString(), B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isBadRequest());
 
@@ -294,9 +356,8 @@ class MessagePartnerV2ControllerITTest {
     void getMessages_notAuthorizedBpRole_thenReturnsForbidden() throws Exception {
         String bpId = UUID.randomUUID().toString();
         mockMvc.perform(
-                        get("/api/partner/v2/messages")
+                        get("/api/partner/v4/messages")
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
@@ -307,9 +368,8 @@ class MessagePartnerV2ControllerITTest {
     void getMessages_notAuthorizedUserRole_thenReturnsForbidden() throws Exception {
         String bpId = UUID.randomUUID().toString();
         mockMvc.perform(
-                        get("/api/partner/v2/messages")
+                        get("/api/partner/v4/messages")
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForUserRoles(B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
@@ -319,9 +379,8 @@ class MessagePartnerV2ControllerITTest {
     @Test
     void getMessages_wrongBpId_thenReturnsForbidden() throws Exception {
         mockMvc.perform(
-                        get("/api/partner/v2/messages")
+                        get("/api/partner/v4/messages")
                                 .header(HEADER_BP_ID, UUID.randomUUID())
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles("dummy", B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isForbidden());
 
@@ -331,9 +390,8 @@ class MessagePartnerV2ControllerITTest {
     @Test
     void getMessages_withoutAuthentication_thenReturnsUnauthorized() throws Exception {
         mockMvc.perform(
-                        get("/api/partner/v2/messages")
-                                .header(HEADER_BP_ID, UUID.randomUUID().toString())
-                                .contentType(MediaType.APPLICATION_XML_VALUE))
+                        get("/api/partner/v4/messages")
+                                .header(HEADER_BP_ID, UUID.randomUUID().toString()))
                 .andExpect(status().isUnauthorized());
 
         verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
@@ -346,15 +404,37 @@ class MessagePartnerV2ControllerITTest {
         UUID message2Id = UUID.randomUUID();
         when(messageExchangeService.getMessages(bpId, null, null, null, null, 1000))
                 .thenReturn(List.of(new MessageSearchResultDto(message1Id, "type1", MediaType.APPLICATION_XML_VALUE, null, null),
-                        new MessageSearchResultDto(message2Id, "type2", MediaType.APPLICATION_XML_VALUE, "groupdId2", "partnerTopic2")));
+                        new MessageSearchResultDto(message2Id, "type2", MediaType.APPLICATION_XML_VALUE, "groupId2", "partnerTopic2")));
 
         mockMvc.perform(
-                        get("/api/partner/v2/messages/")
+                        get("/api/partner/v4/messages/")
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isOk())
-                .andExpect(content().string("<messages><message><messageId>" + message1Id + "</messageId><messageType>type1</messageType></message><message><messageId>" + message2Id + "</messageId><messageType>type2</messageType></message></messages>"));
+                .andExpect(content().string("{\"messages\":[{\"messageId\":\"" + message1Id +
+                                            "\",\"messageType\":\"type1\",\"contentType\":\"application/xml\"},{\"messageId\":\"" + message2Id +
+                                            "\",\"messageType\":\"type2\",\"groupId\":\"groupId2\",\"partnerTopic\":\"partnerTopic2\",\"contentType\":\"application/xml\"}]}"));
+
+        verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, 1000);
+    }
+
+    @Test
+    void getMessages_whenRequestOkWithMultipleContentTypes_thenReturnsResults() throws Exception {
+        String bpId = UUID.randomUUID().toString();
+        UUID message1Id = UUID.randomUUID();
+        UUID message2Id = UUID.randomUUID();
+        when(messageExchangeService.getMessages(bpId, null, null, null, null, 1000))
+                .thenReturn(List.of(new MessageSearchResultDto(message1Id, "type1", MediaType.APPLICATION_XML_VALUE, null, null),
+                        new MessageSearchResultDto(message2Id, "type2", MediaType.APPLICATION_YAML_VALUE, "groupId2", "partnerTopic2")));
+
+        mockMvc.perform(
+                        get("/api/partner/v4/messages/")
+                                .header(HEADER_BP_ID, bpId)
+                                .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
+                .andExpect(status().isOk())
+                .andExpect(content().string("{\"messages\":[{\"messageId\":\"" + message1Id +
+                                            "\",\"messageType\":\"type1\",\"contentType\":\"application/xml\"},{\"messageId\":\"" + message2Id +
+                                            "\",\"messageType\":\"type2\",\"groupId\":\"groupId2\",\"partnerTopic\":\"partnerTopic2\",\"contentType\":\"application/yaml\"}]}"));
 
         verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, 1000);
     }
@@ -373,48 +453,18 @@ class MessagePartnerV2ControllerITTest {
                 .thenReturn(List.of(new MessageSearchResultDto(messageId, "type", MediaType.APPLICATION_XML_VALUE, null, null)));
 
         mockMvc.perform(
-                        get("/api/partner/v2/messages")
+                        get("/api/partner/v4/messages")
                                 .header(HEADER_BP_ID, bpId)
                                 .param("topicName", topicName)
                                 .param("groupId", groupId)
                                 .param("lastMessageId", lastMessageId.toString())
-                                .header(HEADER_PARTNER_TOPIC, partnerTopic)
+                                .param("partnerTopic", partnerTopic)
                                 .param("size", String.valueOf(size))
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isOk())
-                .andExpect(content().string("<messages><message><messageId>" + messageId + "</messageId><messageType>type</messageType></message></messages>"));
+                .andExpect(content().string("{\"messages\":[{\"messageId\":\"" + messageId + "\",\"messageType\":\"type\",\"contentType\":\"application/xml\"}]}"));
 
         verify(messageExchangeService, times(1)).getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, size);
-    }
-
-    @Test
-    void getMessages_whenRequestWithAllParamsOk_lastMessageIdUppercaseID_thenReturnsResults() throws Exception {
-        String bpId = UUID.randomUUID().toString();
-        UUID messageId = UUID.randomUUID();
-        String topicName = "topicName";
-        String groupId = "groupId";
-        UUID lastMessageID = UUID.randomUUID();
-        String partnerTopic = "partnerTopic";
-        int size = 3;
-
-        when(messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageID, partnerTopic, size))
-                .thenReturn(List.of(new MessageSearchResultDto(messageId, "type", MediaType.APPLICATION_XML_VALUE, "groupdId", "partnerTopic")));
-
-        mockMvc.perform(
-                        get("/api/partner/v2/messages")
-                                .header(HEADER_BP_ID, bpId)
-                                .param("topicName", topicName)
-                                .param("groupId", groupId)
-                                .param("lastMessageID", lastMessageID.toString())
-                                .header(HEADER_PARTNER_TOPIC, partnerTopic)
-                                .param("size", String.valueOf(size))
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
-                                .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
-                .andExpect(status().isOk())
-                .andExpect(content().string("<messages><message><messageId>" + messageId + "</messageId><messageType>type</messageType></message></messages>"));
-
-        verify(messageExchangeService, times(1)).getMessages(bpId, topicName, groupId, lastMessageID, partnerTopic, size);
     }
 
     @Test
@@ -423,12 +473,11 @@ class MessagePartnerV2ControllerITTest {
         when(messageExchangeService.getMessages(bpId, null, null, null, null, 1000)).thenReturn(List.of());
 
         mockMvc.perform(
-                        get("/api/partner/v2/messages")
+                        get("/api/partner/v4/messages")
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isOk())
-                .andExpect(content().string("<messages/>"));
+                .andExpect(content().string("{\"messages\":[]}"));
 
         verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, 1000);
     }
@@ -438,8 +487,7 @@ class MessagePartnerV2ControllerITTest {
         UUID messageId = UUID.randomUUID();
 
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}/next", messageId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
+                        get("/api/partner/v4/messages/{messageId}/next", messageId)
                                 .with(authentication(createAuthenticationForBpRoles(UUID.randomUUID().toString(), B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isBadRequest());
 
@@ -451,9 +499,8 @@ class MessagePartnerV2ControllerITTest {
         UUID messageId = UUID.randomUUID();
         String bpId = UUID.randomUUID().toString();
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}/next", messageId)
+                        get("/api/partner/v4/messages/{messageId}/next", messageId)
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
@@ -465,9 +512,8 @@ class MessagePartnerV2ControllerITTest {
         UUID messageId = UUID.randomUUID();
         String bpId = UUID.randomUUID().toString();
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}/next", messageId)
+                        get("/api/partner/v4/messages/{messageId}/next", messageId)
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForUserRoles(B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
@@ -478,9 +524,8 @@ class MessagePartnerV2ControllerITTest {
     void getNextMessage_wrongBpId_thenReturnsForbidden() throws Exception {
         UUID messageId = UUID.randomUUID();
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}/next", messageId)
+                        get("/api/partner/v4/messages/{messageId}/next", messageId)
                                 .header(HEADER_BP_ID, UUID.randomUUID())
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles("dummy", B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isForbidden());
 
@@ -491,9 +536,8 @@ class MessagePartnerV2ControllerITTest {
     void getNextMessage_withoutAuthentication_thenReturnsUnauthorized() throws Exception {
         UUID messageId = UUID.randomUUID();
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}/next", messageId)
-                                .header(HEADER_BP_ID, UUID.randomUUID().toString())
-                                .contentType(MediaType.APPLICATION_XML_VALUE))
+                        get("/api/partner/v4/messages/{messageId}/next", messageId)
+                                .header(HEADER_BP_ID, UUID.randomUUID().toString()))
                 .andExpect(status().isUnauthorized());
 
         verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
@@ -510,15 +554,12 @@ class MessagePartnerV2ControllerITTest {
         when(messageExchangeService.getNextMessageFromInternalApplication(messageId, bpId, null, null)).thenReturn(Optional.of(nextMessageResultDto));
 
         mockMvc.perform(
-                        get("/api/partner/v2/messages/{messageId}/next", messageId)
+                        get("/api/partner/v4/messages/{messageId}/next", messageId)
                                 .header(HEADER_BP_ID, bpId)
-                                .contentType(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isOk())
                 .andExpect(content().string("<content>test</content>"))
-                .andExpect(header().string(HEADER_MESSAGE_ID, messageIdFromDatabase.toString()))
-                //TODO: JEAP-5099 remove old header
-                .andExpect(header().string(HEADER_MESSAGE_ID_OLD, messageIdFromDatabase.toString()));
+                .andExpect(header().string(HEADER_MESSAGE_ID, messageIdFromDatabase.toString()));
 
         verify(messageExchangeService, times(1)).getNextMessageFromInternalApplication(messageId, bpId, null, null);
     }

@@ -7,7 +7,7 @@
     <parent>
         <groupId>ch.admin.bit.jeap</groupId>
         <artifactId>jeap-message-exchange-service</artifactId>
-        <version>3.5.0-SNAPSHOT</version>
+        <version>4.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>jeap-message-exchange-adapter-kafka</artifactId>
@@ -23,12 +23,12 @@
         <dependency>
             <groupId>ch.admin.bit.jeap.messagetype.jeap</groupId>
             <artifactId>b2-b-message-received-event</artifactId>
-            <version>1.1.0</version>
+            <version>1.2.0</version>
         </dependency>
         <dependency>
             <groupId>ch.admin.bit.jeap.messagetype.jeap</groupId>
             <artifactId>b2-b-message-sent-event</artifactId>
-            <version>1.0.0</version>
+            <version>1.1.0</version>
         </dependency>
         <dependency>
             <groupId>ch.admin.bit.jeap.messagetype.jeap</groupId>

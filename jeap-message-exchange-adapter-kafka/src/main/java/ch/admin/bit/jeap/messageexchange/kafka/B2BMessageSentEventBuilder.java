@@ -17,6 +17,7 @@ public class B2BMessageSentEventBuilder extends AvroDomainEventBuilder<B2BMessag
     private String bpId;
     private String messageId;
     private String type;
+    private String contentType;
 
     private String topicName;
     private String groupId;
@@ -70,6 +71,11 @@ public class B2BMessageSentEventBuilder extends AvroDomainEventBuilder<B2BMessag
         return this;
     }
 
+    public B2BMessageSentEventBuilder contentType(String contentType) {
+        this.contentType = contentType;
+        return this;
+    }
+
     @Override
     protected B2BMessageSentEventBuilder self() {
         return this;
@@ -93,6 +99,7 @@ public class B2BMessageSentEventBuilder extends AvroDomainEventBuilder<B2BMessag
                 .setBpId(bpId)
                 .setMessageId(messageId)
                 .setType(type)
+                .setContentType(contentType)
                 .build();
         B2BMessageSentEventReferences references = B2BMessageSentEventReferences.newBuilder()
                 .setMessageReference(reference)

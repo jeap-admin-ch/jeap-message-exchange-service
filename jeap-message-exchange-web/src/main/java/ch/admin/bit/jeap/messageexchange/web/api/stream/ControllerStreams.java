@@ -2,14 +2,17 @@ package ch.admin.bit.jeap.messageexchange.web.api.stream;
 
 import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.web.api.MessageExchangeApiProperties;
+import ch.admin.bit.jeap.messageexchange.web.api.exception.UnsupportedMediaTypeException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.List;
 
 import static ch.admin.bit.jeap.messageexchange.web.api.DeprecatedHeaderNames.HEADER_MESSAGE_ID_OLD;
 import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.HEADER_MESSAGE_ID;
@@ -54,6 +57,16 @@ public class ControllerStreams {
         } else {
             return readRequestOfUnknownLengthToByteArray(request);
         }
+    }
+
+    public String validateContentType(String contentType) throws UnsupportedMediaTypeException {
+        List<MediaType> mediaTypes = properties.getMediaTypes();
+        String contentTypeToValidate = contentType.split(";")[0];
+        log.debug("Validating content type '{}' with allowed mediaTypes '{}'", contentType, mediaTypes);
+        if (!mediaTypes.stream().map(MediaType::toString).toList().contains(contentTypeToValidate)){
+            throw UnsupportedMediaTypeException.mediaTypeNotSupported(contentType);
+        }
+        return contentTypeToValidate;
     }
 
     private MessageContent readRequestOfUnknownLengthToByteArray(HttpServletRequest request) throws IOException {

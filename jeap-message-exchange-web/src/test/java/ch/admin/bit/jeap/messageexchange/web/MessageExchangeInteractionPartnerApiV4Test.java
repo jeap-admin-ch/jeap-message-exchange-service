@@ -1,11 +1,9 @@
 package ch.admin.bit.jeap.messageexchange.web;
 
+import ch.admin.bit.jeap.messageexchange.domain.Message;
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
 import ch.admin.bit.jeap.messageexchange.event.message.received.B2BMessageReceivedEvent;
 import ch.admin.bit.jeap.messageexchange.event.message.received.MessageReference;
-import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanResult;
-import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanResultNotifier;
-import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanTrigger;
 import ch.admin.bit.jeap.messageexchange.objectstorage.S3ObjectStorageRepository;
 import ch.admin.bit.jeap.messaging.kafka.test.KafkaIntegrationTestBase;
 import ch.admin.bit.jeap.security.resource.semanticAuthentication.SemanticApplicationRole;
@@ -14,9 +12,9 @@ import ch.admin.bit.jeap.security.test.jws.JwsBuilder;
 import ch.admin.bit.jeap.security.test.jws.JwsBuilderFactory;
 import ch.admin.bit.jeap.security.test.resource.configuration.JeapOAuth2IntegrationTestResourceConfiguration;
 import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
-import lombok.RequiredArgsConstructor;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -25,16 +23,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -47,11 +40,10 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static ch.admin.bit.jeap.messageexchange.web.LocalStackTestSupport.createLocalStackContainer;
 import static ch.admin.bit.jeap.messageexchange.web.LocalStackTestSupport.createS3Client;
@@ -60,11 +52,14 @@ import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.HEADER_MESSA
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
         properties = {
-                "server.port=8308",
+                "server.port=8307",
                 "jeap.messageexchange.kafka.topic.message-received=message-received",
                 "jeap.messaging.kafka.error-topic-name=error",
                 "jeap.messaging.kafka.system-name=test",
@@ -74,27 +69,21 @@ import static org.hamcrest.Matchers.containsString;
                 "jeap.security.oauth2.resourceserver.authorization-server.jwk-set-uri=http://localhost:${server.port}/.well-known/jwks.json",
                 "jeap.messageexchange.objectstorage.connection.bucket-name-partner=test-bucket-partner",
                 "jeap.messageexchange.objectstorage.connection.bucket-name-internal=test-bucket-internal",
-                "jeap.messageexchange.api.max-request-body-size-in-bytes=100",
-                "jeap.messageexchange.malwarescan.enabled=true"
+                "jeap.messageexchange.api.max-request-body-size-in-bytes=100"
         })
-@ContextConfiguration(classes = {MessageExchangeApplication.class, JeapOAuth2IntegrationTestResourceConfiguration.class, MessageExchangeInteractionMalwareScanWithScanTriggerTest.TestConfig.class})
+@ContextConfiguration(classes = {MessageExchangeApplication.class, JeapOAuth2IntegrationTestResourceConfiguration.class})
 @Testcontainers
 @AutoConfigureObservability
 @SuppressWarnings("resource")
-@ActiveProfiles("trigger-test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-class MessageExchangeInteractionMalwareScanWithScanTriggerTest extends KafkaIntegrationTestBase {
+class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBase {
 
     @Container
     public static LocalStackContainer localStack = createLocalStackContainer();
-
-    private static final AtomicReference<MalwareScanResult> MALWARE_SCAN_RESULT_ATOMIC_REFERENCE = new AtomicReference<>();
 
     @LocalServerPort
     int serverPort;
 
     @MockitoSpyBean
-    @SuppressWarnings("unused")
     private S3ObjectStorageRepository objectStorageRepository;
 
     @Autowired
@@ -107,12 +96,7 @@ class MessageExchangeInteractionMalwareScanWithScanTriggerTest extends KafkaInte
     private TestEventConsumer testEventConsumer;
 
     @Autowired
-    @SuppressWarnings("unused")
     private MessageRepository messageRepository;
-
-    @Autowired
-    @SuppressWarnings("unused")
-    private TestMalwareScanResultNotifier malwareScanResultNotifier;
 
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine");
 
@@ -137,6 +121,18 @@ class MessageExchangeInteractionMalwareScanWithScanTriggerTest extends KafkaInte
     private static final SemanticApplicationRole B2B_MESSAGE_IN_READ = SemanticApplicationRole.builder()
             .system("junit")
             .resource("b2bmessagein")
+            .operation("read")
+            .build();
+
+    private static final SemanticApplicationRole B2B_MESSAGE_OUT_WRITE = SemanticApplicationRole.builder()
+            .system("junit")
+            .resource("b2bmessageout")
+            .operation("write")
+            .build();
+
+    private static final SemanticApplicationRole B2B_MESSAGE_OUT_READ = SemanticApplicationRole.builder()
+            .system("junit")
+            .resource("b2bmessageout")
             .operation("read")
             .build();
 
@@ -177,11 +173,9 @@ class MessageExchangeInteractionMalwareScanWithScanTriggerTest extends KafkaInte
         String messageType = "myMessageType";
         String xmlContent = getXmlResource("input.xml");
 
-        MALWARE_SCAN_RESULT_ATOMIC_REFERENCE.set(MalwareScanResult.NO_THREATS_FOUND);
-
         given()
                 .spec(request)
-                .contentType(MediaType.APPLICATION_XML_VALUE)
+                .contentType(ContentType.XML)
                 .auth().oauth2(createAuthTokenForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))
                 .header(HEADER_BP_ID, bpId)
                 .header(HEADER_MESSAGE_TYPE, messageType)
@@ -204,10 +198,10 @@ class MessageExchangeInteractionMalwareScanWithScanTriggerTest extends KafkaInte
 
         Response response = given()
                 .spec(request)
-                .accept(MediaType.APPLICATION_XML_VALUE)
+                .contentType(ContentType.XML)
                 .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_IN_READ))
                 .when()
-                .get("/api/internal/v3/messages/" + messageId);
+                .get("/api/internal/v2/messages/" + messageId);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
         assertThat(response.getBody().asString()).isEqualTo(xmlContent);
@@ -215,17 +209,15 @@ class MessageExchangeInteractionMalwareScanWithScanTriggerTest extends KafkaInte
     }
 
     @Test
-    void putMessageFromPartner_thenWaitForNotification_thenShouldNotBeAbleToGetMessageBecauseScanFailed() throws Exception {
+    void putMessageFromPartner_whenInvalidXml_thenWaitForNotification_thenShouldBeAbleToGetMessage() throws Exception {
         UUID messageId = UUID.randomUUID();
         String bpId = "myBpID";
         String messageType = "myMessageType";
-        String xmlContent = getXmlResource("input.xml");
-
-        MALWARE_SCAN_RESULT_ATOMIC_REFERENCE.set(MalwareScanResult.FAILED);
+        String xmlContent = getXmlResource("invalid.not-xml");
 
         given()
                 .spec(request)
-                .contentType(MediaType.APPLICATION_XML_VALUE)
+                .contentType(ContentType.XML)
                 .auth().oauth2(createAuthTokenForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))
                 .header(HEADER_BP_ID, bpId)
                 .header(HEADER_MESSAGE_TYPE, messageType)
@@ -248,13 +240,165 @@ class MessageExchangeInteractionMalwareScanWithScanTriggerTest extends KafkaInte
 
         Response response = given()
                 .spec(request)
-                .accept(MediaType.APPLICATION_XML_VALUE)
+                .contentType(ContentType.XML)
                 .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_IN_READ))
                 .when()
-                .get("/api/internal/v3/messages/" + messageId);
+                .get("/api/internal/v2/messages/" + messageId);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN.value());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
+        assertThat(response.getBody().asString()).isEqualTo(xmlContent);
         assertMetricsPresent();
+    }
+
+    @Test
+    void putMessageFromPartner_inputTooLarge_returnsBadRequest() throws Exception {
+
+        UUID messageId = UUID.randomUUID();
+        String bpId = "myBpID";
+        String messageType = "myMessageType";
+        String xmlContent = getXmlResource("input-too-large.xml");
+
+        given()
+                .spec(request)
+                .contentType(ContentType.XML)
+                .auth().oauth2(createAuthTokenForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))
+                .header(HEADER_BP_ID, bpId)
+                .header(HEADER_MESSAGE_TYPE, messageType)
+                .body(xmlContent)
+                .when()
+                .put("/api/partner/v4/messages/" + messageId)
+                .then()
+                .statusCode(HttpStatus.BAD_REQUEST.value());
+
+        verify(objectStorageRepository, never()).putObject(anyString(), eq(messageId.toString()), any(), anyString());
+    }
+
+    @Test
+    void putMessageFromInternal_thenWaitForMessageInDb_thenShouldBeAbleToGetMessage() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        String bpId = "myBpID";
+        String messageType = "myMessageType";
+        String topicName = "topicName";
+        String xmlContent = getXmlResource("input.xml");
+
+        given()
+                .spec(request)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
+                .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_OUT_WRITE))
+                .header(HEADER_BP_ID, bpId)
+                .header(HEADER_MESSAGE_TYPE, messageType)
+                .param("topicName", topicName)
+                .body(xmlContent)
+                .when()
+                .put("/api/internal/v2/messages/" + messageId)
+                .then()
+                .statusCode(HttpStatus.CREATED.value());
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .until(() -> messageRepository.findByMessageId(messageId).isPresent());
+
+        Optional<Message> optionalMessage = messageRepository.findByMessageId(messageId);
+
+        assertThat(optionalMessage).isPresent();
+
+        Message savedMessage = optionalMessage.get();
+
+        assertThat(savedMessage.getSequenceId()).isNotNull();
+        assertThat(savedMessage.getMessageId()).isEqualTo(messageId);
+        assertThat(savedMessage.getBpId()).isEqualTo(bpId);
+        assertThat(savedMessage.getTopicName()).isEqualTo(topicName);
+        assertThat(savedMessage.getMessageType()).isEqualTo(messageType);
+
+        Response response = given()
+                .spec(request)
+                .accept(MediaType.APPLICATION_XML_VALUE)
+                .auth().oauth2(createAuthTokenForBpRoles(bpId, B2B_MESSAGE_OUT_READ))
+                .header(HEADER_BP_ID, bpId)
+                .when()
+                .get("/api/partner/v4/messages/" + messageId);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
+        assertThat(response.getBody().asString()).isEqualTo(xmlContent);
+
+    }
+
+    @Test
+    void putMessagesFromInternal_thenWaitForMessagesInDb_thenShouldBeAbleToGetNextMessage() throws Exception {
+        UUID message1Id = UUID.randomUUID();
+        UUID message2Id = UUID.randomUUID();
+        String bpId = "myBpID";
+        String messageType = "myMessageType";
+        String topicName = "topicName";
+        String xmlContent1 = getXmlResource("input.xml");
+        String xmlContent2 = "<content>test for message 2</content>";
+
+        given()
+                .spec(request)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
+                .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_OUT_WRITE))
+                .header(HEADER_BP_ID, bpId)
+                .header(HEADER_MESSAGE_TYPE, messageType)
+                .param("topicName", topicName)
+                .body(xmlContent1)
+                .when()
+                .put("/api/internal/v2/messages/" + message1Id)
+                .then()
+                .statusCode(HttpStatus.CREATED.value());
+
+        given()
+                .spec(request)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
+                .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_OUT_WRITE))
+                .header(HEADER_BP_ID, bpId)
+                .header(HEADER_MESSAGE_TYPE, messageType)
+                .param("topicName", topicName)
+                .body(xmlContent2)
+                .when()
+                .put("/api/internal/v2/messages/" + message2Id)
+                .then()
+                .statusCode(HttpStatus.CREATED.value());
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .until(() -> messageRepository.findByMessageId(message1Id).isPresent() && messageRepository.findByMessageId(message2Id).isPresent());
+
+        Response response = given()
+                .spec(request)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
+                .auth().oauth2(createAuthTokenForBpRoles(bpId, B2B_MESSAGE_OUT_READ))
+                .header(HEADER_BP_ID, bpId)
+                .when()
+                .get("/api/partner/v4/messages/" + message1Id + "/next");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
+        assertThat(response.getBody().asString()).isEqualTo(xmlContent2);
+    }
+
+
+    @Test
+    void putMessageFromInternal_inputTooLarge_returnsBadRequest() throws Exception {
+
+        UUID messageId = UUID.randomUUID();
+        String bpId = "myBpID";
+        String messageType = "myMessageType";
+        String topicName = "topicName";
+        String xmlContent = getXmlResource("input-too-large.xml");
+
+        given()
+                .spec(request)
+                .contentType(ContentType.XML)
+                .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_OUT_WRITE))
+                .header(HEADER_BP_ID, bpId)
+                .header(HEADER_MESSAGE_TYPE, messageType)
+                .param("topicName", topicName)
+                .body(xmlContent)
+                .when()
+                .put("/api/internal/v2/messages/" + messageId)
+                .then()
+                .statusCode(HttpStatus.BAD_REQUEST.value());
+
+        verify(objectStorageRepository, never()).putObject(anyString(), eq(messageId.toString()), any(), anyString());
     }
 
     private String createAuthTokenForBpRoles(String bpId, SemanticApplicationRole... roles) {
@@ -285,44 +429,9 @@ class MessageExchangeInteractionMalwareScanWithScanTriggerTest extends KafkaInte
                 .assertThat()
                 .statusCode(200)
                 .body(containsString("jeap_mes_partner_controller_send_message"))
+                .body(containsString("jeap_mes_internal_controller_get_message"))
+                .body(containsString("jeap_mes_repository_get_next_message_id"))
                 .body(containsString("jeap_mes_objectstore_put"))
-                .body(containsString("jeap_mes_objectstore_get"))
-                .body(containsString("jeap_mes_objectstore_update_tags"))
-                .body(containsString("jeap_mes_malware_scan_duration_timer"))
-                .body(containsString("jeap_mes_malware_scan_result_counter"));
-    }
-
-
-    @TestConfiguration
-    static class TestConfig {
-
-        @Bean
-        @Profile("trigger-test")
-        public TestMalwareScanResultNotifier malwareScanResultNotifier() {
-            return new TestMalwareScanResultNotifier();
-        }
-
-        @Bean
-        @Profile("trigger-test")
-        public TestMalwareScanTrigger malwareScanTrigger(TestMalwareScanResultNotifier notifier) {
-            return new TestMalwareScanTrigger(notifier);
-        }
-    }
-
-    static class TestMalwareScanResultNotifier extends MalwareScanResultNotifier {
-        public void triggerScanResult(String key, String bucketName, MalwareScanResult scanResult) {
-            notifyListeners(key, bucketName, scanResult);
-        }
-    }
-
-    @RequiredArgsConstructor
-    static class TestMalwareScanTrigger implements MalwareScanTrigger {
-
-        private final TestMalwareScanResultNotifier notifier;
-
-        @Override
-        public void triggerScan(String key, String bucketName, InputStream inputStream, int contentLength) {
-            notifier.triggerScanResult(key, bucketName, MALWARE_SCAN_RESULT_ATOMIC_REFERENCE.get());
-        }
+                .body(containsString("jeap_mes_objectstore_get"));
     }
 }

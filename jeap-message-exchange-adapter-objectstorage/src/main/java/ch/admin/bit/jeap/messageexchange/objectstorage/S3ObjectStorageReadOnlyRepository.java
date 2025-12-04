@@ -6,12 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.GetObjectTaggingRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectTaggingResponse;
-import software.amazon.awssdk.services.s3.model.S3Exception;
-import software.amazon.awssdk.services.s3.model.Tag;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +24,24 @@ public class S3ObjectStorageReadOnlyRepository {
         try {
             MessageContent messageContent = getMessageContent(bucketName, objectKey);
             return Optional.of(messageContent);
+        } catch (S3Exception ex) {
+            if (ex.awsErrorDetails() != null && NO_SUCH_KEY.equalsIgnoreCase(ex.awsErrorDetails().errorCode())) {
+                return Optional.empty();
+            }
+            throw ex;
+        }
+    }
+
+    public Optional<String> getContentType(String bucketName, String objectKey) {
+        try {
+            // To get the Content-Type, you can use s3Client.headObject and read the contentType property.
+            HeadObjectResponse headObjectResponse = s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectKey)
+                    .build());
+            String contentType = headObjectResponse.contentType();
+            log.debug("Content-Type for object {} in bucket {}: {}", objectKey, bucketName, contentType);
+            return Optional.ofNullable(contentType);
         } catch (S3Exception ex) {
             if (ex.awsErrorDetails() != null && NO_SUCH_KEY.equalsIgnoreCase(ex.awsErrorDetails().errorCode())) {
                 return Optional.empty();

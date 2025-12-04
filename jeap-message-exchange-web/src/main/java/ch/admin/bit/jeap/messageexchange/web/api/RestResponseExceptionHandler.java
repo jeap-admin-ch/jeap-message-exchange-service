@@ -1,9 +1,11 @@
 package ch.admin.bit.jeap.messageexchange.web.api;
 
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidBpIdException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.MissingRequiredHeaderException;
+import ch.admin.bit.jeap.messageexchange.web.api.exception.UnsupportedMediaTypeException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -33,6 +35,18 @@ public class RestResponseExceptionHandler extends ResponseEntityExceptionHandler
     public ResponseEntity<String> handleMalwareScanNotDeliveringException(MalwareScanFailedOrBlockedException ex) {
         return ResponseEntity.status(403)
                 .body("Not delivering because of malware scan status");
+    }
+
+    @ExceptionHandler(UnsupportedMediaTypeException.class)
+    public ResponseEntity<String> handleUnsupportedMediaTypeException(UnsupportedMediaTypeException ex) {
+        return ResponseEntity.status(406)
+                .body(ex.getMessage());
+    }
+
+    @ExceptionHandler(MismatchedContentTypeException.class)
+    public ResponseEntity<String> handleIncorrectContentTypeException(MismatchedContentTypeException ex) {
+        return ResponseEntity.status(406)
+                .body(ex.getMessage());
     }
 
     //TODO: JEAP-5099 remove method

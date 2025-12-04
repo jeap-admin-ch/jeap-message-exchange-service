@@ -1,6 +1,7 @@
 package ch.admin.bit.jeap.messageexchange.domain;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 
 import java.util.UUID;
 
@@ -16,6 +17,7 @@ class MessageTest {
                 .bpId("bpID")
                 .messageType("messageType")
                 .topicName("topicName")
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
 
         assertThat(message).isNotNull();

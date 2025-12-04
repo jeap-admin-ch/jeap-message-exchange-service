@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -89,6 +90,7 @@ class JdbcMessageRepositoryITTest {
                 .groupId("myGroupId")
                 .topicName("myTopicName")
                 .partnerTopic("myPartnerTopic")
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
         assertThat(message).isNotNull();
 
@@ -117,6 +119,7 @@ class JdbcMessageRepositoryITTest {
                 .topicName("myTopicName2")
                 .partnerTopic("myPartnerTopic2")
                 .overrideCreatedAt(timeIn2000)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
         assertThat(message2).isNotNull();
 
@@ -144,6 +147,7 @@ class JdbcMessageRepositoryITTest {
                 .bpId("bpId")
                 .messageType("messageType")
                 .topicName("topicName")
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
         assertThat(message).isNotNull();
 
@@ -169,6 +173,7 @@ class JdbcMessageRepositoryITTest {
                 .groupId("groupId")
                 .topicName("topicName")
                 .partnerTopic("partnerTopic")
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
         assertThat(message).isNotNull();
 
@@ -333,6 +338,7 @@ class JdbcMessageRepositoryITTest {
                 .groupId(groupId)
                 .topicName(topicName)
                 .partnerTopic(partnerTopic)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
         messageRepository.save(message);
         return message;
@@ -345,6 +351,7 @@ class JdbcMessageRepositoryITTest {
                 .messageType("messageType")
                 .topicName("topic")
                 .overrideCreatedAt(createdAt)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
         messageRepository.save(message);
         return message;

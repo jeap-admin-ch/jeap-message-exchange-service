@@ -2,6 +2,7 @@ package ch.admin.bit.jeap.messageexchange.web.api.stream;
 
 import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.web.api.MessageExchangeApiProperties;
+import ch.admin.bit.jeap.messageexchange.web.api.exception.UnsupportedMediaTypeException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,8 +14,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -68,6 +69,24 @@ class ControllerStreamsTest {
                 controllerStreams.getRequestContent(request))
                 .isInstanceOf(RequestRejectedException.class)
                 .hasMessageContaining("Request content exceeded limit of 10 bytes");
+    }
+
+    @Test
+    void validateContentType_unsupportedMediaType_ExceptionThrown() {
+        assertThatThrownBy(() ->
+                controllerStreams.validateContentType("application/foo"))
+                .isInstanceOf(UnsupportedMediaTypeException.class)
+                .hasMessageContaining("The media type 'application/foo' is not supported.");
+    }
+
+    @Test
+    void validateContentType_supportedMediaType_ExceptionNotThrown() {
+        assertDoesNotThrow(() -> controllerStreams.validateContentType("application/xml"));
+    }
+
+    @Test
+    void validateContentType_xmlWithCharset_ExceptionNotThrown() {
+        assertDoesNotThrow(() -> controllerStreams.validateContentType("application/xml;charset=UTF-8"));
     }
 
     private static HttpServletRequest mockRequest(byte[] body, int contentLength) throws IOException {

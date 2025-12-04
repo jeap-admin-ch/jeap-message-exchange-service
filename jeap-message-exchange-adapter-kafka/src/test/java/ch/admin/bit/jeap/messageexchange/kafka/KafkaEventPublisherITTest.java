@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -61,28 +62,31 @@ class KafkaEventPublisherITTest extends KafkaIntegrationTestBase {
         UUID messageId = UUID.randomUUID();
         String messageType = "myMessageType";
         PublishedScanStatus externalPublishedScanStatus = PublishedScanStatus.NO_THREATS_FOUND;
+        String contentType = MediaType.APPLICATION_XML_VALUE;
 
-        kafkaEventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, externalPublishedScanStatus);
+        kafkaEventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, externalPublishedScanStatus, contentType);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(30))
                 .until(() -> (messages.size() == 1 && messagesOnJunitTest.size() == 1));
 
         // message sent from mes
-        assertThat(messages.get(0).getReferences().getMessageReference().getBpId()).isEqualTo(bpId);
-        assertThat(messages.get(0).getReferences().getMessageReference().getMessageId()).isEqualTo(messageId.toString());
-        assertThat(messages.get(0).getReferences().getMessageReference().getType()).isEqualTo(messageType);
-        assertThat(messages.get(0).getPublisher().getSystem()).isEqualTo("my-system-name");
-        assertThat(messages.get(0).getPublisher().getService()).isEqualTo("my-service-name");
-        assertThat(messages.get(0).getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());
-        assertThat(messages.get(0).getPayload().getScanStatus()).isEqualTo(S3ObjectMalwareScanStatus.NO_THREATS_FOUND);
+        assertThat(messages.getFirst().getReferences().getMessageReference().getBpId()).isEqualTo(bpId);
+        assertThat(messages.getFirst().getReferences().getMessageReference().getMessageId()).isEqualTo(messageId.toString());
+        assertThat(messages.getFirst().getReferences().getMessageReference().getType()).isEqualTo(messageType);
+        assertThat(messages.getFirst().getPublisher().getSystem()).isEqualTo("my-system-name");
+        assertThat(messages.getFirst().getPublisher().getService()).isEqualTo("my-service-name");
+        assertThat(messages.getFirst().getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());
+        assertThat(messages.getFirst().getPayload().getScanStatus()).isEqualTo(S3ObjectMalwareScanStatus.NO_THREATS_FOUND);
+        assertThat(messages.getFirst().getReferences().getMessageReference().getContentType()).isEqualTo(contentType);
 
         // message sent from plugin-api listener
-        assertThat(messagesOnJunitTest.get(0).getReferences().getMessageReference().getBpId()).isEqualTo(bpId + "_plugin");
-        assertThat(messagesOnJunitTest.get(0).getReferences().getMessageReference().getMessageId()).isEqualTo(messageId + "_plugin");
-        assertThat(messagesOnJunitTest.get(0).getReferences().getMessageReference().getType()).isEqualTo(messageType + "_plugin");
-        assertThat(messagesOnJunitTest.get(0).getPublisher().getSystem()).isEqualTo("junit");
-        assertThat(messagesOnJunitTest.get(0).getPublisher().getService()).isEqualTo("junit");
+        assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getBpId()).isEqualTo(bpId + "_plugin");
+        assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getMessageId()).isEqualTo(messageId + "_plugin");
+        assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getType()).isEqualTo(messageType + "_plugin");
+        assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getContentType()).isEqualTo("junit");
+        assertThat(messagesOnJunitTest.getFirst().getPublisher().getSystem()).isEqualTo("junit");
+        assertThat(messagesOnJunitTest.getFirst().getPublisher().getService()).isEqualTo("junit");
 
     }
 

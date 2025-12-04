@@ -48,34 +48,13 @@ public class ObjectStorageConfiguration {
     }
 
     @Bean
-    @ConfigurationProperties("jeap.messageexchange.objectstorage.connection-fallback")
-    @ConditionalOnProperty("jeap.messageexchange.objectstorage.connection-fallback.bucket-name-internal")
-    public S3ObjectStorageConnectionProperties s3ObjectStorageFallbackConnectionProperties() {
-        return new S3ObjectStorageConnectionProperties();
-    }
-
-    @Bean
-    public ObjectStoreAdapter objectStoreAdapter(S3ObjectStorageRepository objectStorageRepository,
-                                                 S3ObjectStorageConnectionProperties s3ObjectStorageConnectionProperties,
-                                                 Optional<S3ObjectStorageFallbackRepository> objectStorageFallbackRepository,
-                                                 Optional<S3ObjectStorageConnectionProperties> s3ObjectStorageFallbackConnectionProperties) {
-        return new ObjectStoreAdapter(objectStorageRepository,
-                s3ObjectStorageConnectionProperties.getBucketNameInternal(),
-                s3ObjectStorageConnectionProperties.getBucketNamePartner(),
-                objectStorageFallbackRepository.orElse(null),
-                s3ObjectStorageFallbackConnectionProperties.map(S3ObjectStorageConnectionProperties::getBucketNameInternal).orElse(null),
-                s3ObjectStorageFallbackConnectionProperties.map(S3ObjectStorageConnectionProperties::getBucketNamePartner).orElse(null));
+    public ObjectStoreAdapter objectStoreAdapter(S3ObjectStorageRepository objectStorageRepository, S3ObjectStorageConnectionProperties s3ObjectStorageConnectionProperties) {
+        return new ObjectStoreAdapter(objectStorageRepository, s3ObjectStorageConnectionProperties.getBucketNameInternal(), s3ObjectStorageConnectionProperties.getBucketNamePartner());
     }
 
     @Bean
     public S3ObjectStorageRepository objectStorageRepository(S3Client s3Client, S3LifecycleConfigurationInitializer lifecycleConfigurationInitializer, S3ObjectStorageConnectionProperties s3ObjectStorageConnectionProperties) {
         return new S3ObjectStorageRepository(s3Client, s3ObjectStorageConnectionProperties, housekeepingProperties, lifecycleConfigurationInitializer);
-    }
-
-    @Bean
-    @ConditionalOnBean(name = "s3ObjectStorageFallbackConnectionProperties")
-    public S3ObjectStorageFallbackRepository objectStorageFallbackRepository(S3Client s3ClientFallbackRepository, S3ObjectStorageConnectionProperties s3ObjectStorageFallbackConnectionProperties) {
-        return new S3ObjectStorageFallbackRepository(s3ClientFallbackRepository, s3ObjectStorageFallbackConnectionProperties);
     }
 
     @Bean
@@ -101,12 +80,6 @@ public class ObjectStorageConfiguration {
     @Bean
     public S3Client s3Client(S3ObjectStorageConnectionProperties s3ObjectStorageConnectionProperties, AwsCredentialsProvider awsCredentialsProvider) {
         return createS3Client(s3ObjectStorageConnectionProperties, awsCredentialsProvider);
-    }
-
-    @Bean
-    @ConditionalOnBean(name = "s3ObjectStorageFallbackConnectionProperties")
-    public S3Client s3ClientFallbackRepository(S3ObjectStorageConnectionProperties s3ObjectStorageFallbackConnectionProperties, AwsCredentialsProvider awsCredentialsProvider) {
-        return createS3Client(s3ObjectStorageFallbackConnectionProperties, awsCredentialsProvider);
     }
 
     private S3Client createS3Client(S3ObjectStorageConnectionProperties connectionProperties, AwsCredentialsProvider awsCredentialsProvider) {

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-12-05
+
+### Changed
+
+- The Message Exchange Service now supports multiple media types for message payloads.
+- This version of the library is **breaking** because a new field is needed in the database schema. See the
+  file [./jeap-message-exchange-persistence/src/main/resources/db/migration/V4__add_content_type.sql] for a DDL
+  script that performs the schema upgrade from version 3 to version 4.0.0.
+- Update parent from 30.0.0 to 30.0.1
+
 ## [3.5.0] - 2025-12-03
 
 ### Changed
@@ -45,7 +55,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
--  Breaking Change
+- Breaking Change
     - **Removed** the PostgreSQL `afterMigrate` script (previously required only for Cloud Foundry).
     - **Updated** Flyway migration path to `db/migration`.
     - **Cloud Foundry deployments are no longer supported** starting with this version.
@@ -85,7 +95,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Update parent from 26.76.0 to 27.1.0 
+- Update parent from 26.76.0 to 27.1.0
 
 ## [2.31.0] - 2025-09-02
 
@@ -103,7 +113,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Added message event logic to signal that an internal client of the message exchange service has posted a new message for a business partner
+- Added message event logic to signal that an internal client of the message exchange service has posted a new message
+  for a business partner
 
 ## [2.28.0] - 2025-08-26
 
@@ -200,9 +211,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Configure proxy to work around the issue https://github.com/aws/aws-sdk-java-v2/issues/4728 which is coming with the aws sdk update
+- Configure proxy to work around the issue https://github.com/aws/aws-sdk-java-v2/issues/4728 which is coming with the
+  aws sdk update
 - Update parent from 26.33.0 to 26.35.0
-
 
 ## [2.14.0] - 2025-03-06
 
@@ -236,16 +247,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Prepare repository for Open Source distribution
 - Added partner API v3 with the following changes compared to v2 (note that v2 is unchanged)
 - The messages list response now includes the following optional elements:
-  - `<groupId>`
-  - `<partnerTopic>`
+    - `<groupId>`
+    - `<partnerTopic>`
 - `partnerTopic` is now defined as a query parameter
-  - The HTTP headers `partnerTopic` and `partner-topic` have been removed
+    - The HTTP headers `partnerTopic` and `partner-topic` have been removed
 - Removed Deprecated HTTP Headers
-  - `partnerTopic`
-  - `partner-topic`
-  - `bpId` (use `bp-id` instead)
-  - `messageType` (use `message-type` instead)
-  - `Messageid` (use `message-id` instead)
+    - `partnerTopic`
+    - `partner-topic`
+    - `bpId` (use `bp-id` instead)
+    - `messageType` (use `message-type` instead)
+    - `Messageid` (use `message-id` instead)
 - The deprecated query parameter `lastMessageID` (which was a fallback for the correct name `lastMessageId`) has been
   removed
 
@@ -279,13 +290,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- The MES understands both the old headers and the new standard headers on requests (If a request contains both the old and the new headers and the values are different, the message is rejected)
-  - bpId and bp-id
-  - partnerTopic and partner-topic
-  - messageType and message-type
-  
+- The MES understands both the old headers and the new standard headers on requests (If a request contains both the old
+  and the new headers and the values are different, the message is rejected)
+    - bpId and bp-id
+    - partnerTopic and partner-topic
+    - messageType and message-type
+
 - The MES generates both the old header and the new standard header on responses
-  - Messageid and message-id
+    - Messageid and message-id
 
 - Updated jeap-spring-boot-parent from 26.17.0 to 26.20.0
 
@@ -294,8 +306,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Changes to accept nonstandard requests for backward compatibility with the B2B hub
-  - Accept trailing slashes in resource paths
-  - Accept lastMessageID with uppercase ID
+    - Accept trailing slashes in resource paths
+    - Accept lastMessageID with uppercase ID
 
 ## [2.5.1] - 2024-12-03
 
@@ -343,7 +355,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Removed support for configuring a privileged business partner that is allowed to access partner messages for all partners.
+- Removed support for configuring a privileged business partner that is allowed to access partner messages for all
+  partners.
 
 ## [1.4.1] - 2024-10-11
 

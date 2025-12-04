@@ -2,6 +2,7 @@ package ch.admin.bit.jeap.messageexchange.domain;
 
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.PublishedScanStatus;
@@ -9,15 +10,13 @@ import ch.admin.bit.jeap.messageexchange.domain.malwarescan.S3ObjectMalwareScanR
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.ScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.messaging.EventPublisher;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
-import ch.admin.bit.jeap.messageexchange.domain.objectstore.BucketType;
-import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
-import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTags;
-import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsService;
+import ch.admin.bit.jeap.messageexchange.domain.objectstore.*;
 import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import ch.admin.bit.jeap.messageexchange.domain.xml.XmlValidatingOutputStream;
 import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanTrigger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -42,8 +41,26 @@ public class MessageExchangeService {
     private final Optional<MalwareScanTrigger> malwareScanTriggerOptional;
 
     public Optional<MessageContent> getMessageFromInternalApplication(String bpId, UUID messageId) {
+        try {
+            return getMessageFromInternalApplication(bpId, messageId, null);
+        } catch (MismatchedContentTypeException e) {
+            // This should never happen as we do not check for content type here
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public Optional<MessageContent> getMessageFromInternalApplication(String bpId, UUID messageId, String requestedContentType) throws MismatchedContentTypeException {
         String objectKey = createInternalMessageObjectKey(bpId, messageId);
         log.trace("Retrieve payload for internal message with messageId {} from key {}", messageId, objectKey);
+
+        if (requestedContentType != null) {
+            Optional<String> contentTypeOptional = objectStore.getContentType(BucketType.INTERNAL, objectKey);
+            if (contentTypeOptional.isEmpty()) {
+                return Optional.empty();
+            }
+            validateContentType(messageId, contentTypeOptional.get(), requestedContentType);
+        }
+
         return objectStore.loadMessage(BucketType.INTERNAL, objectKey);
     }
 
@@ -61,8 +78,24 @@ public class MessageExchangeService {
     }
 
     public Optional<MessageContent> getMessageFromPartner(UUID messageId) {
-        log.trace("Retrieve payload for partner message with messageId {}", messageId);
+        try {
+            return getMessageFromPartner(messageId, null);
+        } catch (MismatchedContentTypeException e) {
+            // This should never happen as we do not check for content type here
+            throw new IllegalStateException(e);
+        }
+    }
 
+    public Optional<MessageContent> getMessageFromPartner(UUID messageId, String requestedContentType) throws MismatchedContentTypeException {
+        log.trace("Retrieve payload for partner message with messageId {} and requestedContentType {}", messageId, requestedContentType);
+        if (requestedContentType != null) {
+            Optional<String> contentTypeOptional = objectStore.getContentType(BucketType.PARTNER, messageId.toString());
+
+            if (contentTypeOptional.isEmpty()) {
+                return Optional.empty();
+            }
+            validateContentType(messageId, contentTypeOptional.get(), requestedContentType);
+        }
         Optional<MessageContent> messageInfoWithTagsOptional = objectStore.loadMessageWithTags(BucketType.PARTNER, messageId.toString());
         if (messageInfoWithTagsOptional.isEmpty()) {
             return Optional.empty();
@@ -71,44 +104,77 @@ public class MessageExchangeService {
         return messageInfoWithTagsOptional;
     }
 
+    private static void validateContentType(UUID messageId, String contentType, String requestedContentType) throws MismatchedContentTypeException {
+        if (!requestedContentType.equalsIgnoreCase(contentType)) {
+            log.warn("Message {} has content type {} but requestedContentType is {}", messageId, contentType, requestedContentType);
+            throw MismatchedContentTypeException.requestedContentTypeIncorrect(messageId, contentType, requestedContentType);
+        }
+    }
+
+    /**
+     * Legacy save with xml validation for partner messages.
+     * This method is kept for backward compatibility.
+     */
     public void saveNewMessageFromPartner(UUID messageId, String bpId, String messageType, MessageContent rawMessageContent) throws IOException {
         try (InputStream inputStream = XmlValidatingOutputStream.wrapInputStreamWithXmlValidation(messageId, bpId, rawMessageContent)) {
-            ScanStatus scanStatus = malwareScanProperties.isEnabled() ? ScanStatus.SCAN_PENDING : ScanStatus.NOT_SCANNED;
-            Map<String, String> tags = tagsService.toMap(bpId, messageType, scanStatus, System.currentTimeMillis());
+            saveNewMessageFromPartner(inputStream, messageId, bpId, messageType, rawMessageContent, MediaType.APPLICATION_XML_VALUE);
+        }
+    }
 
-            MessageContent messageContent = new MessageContent(inputStream, rawMessageContent.contentLength(), tags);
+    public void saveNewMessageFromPartner(UUID messageId, String bpId, String messageType, MessageContent rawMessageContent, String contentType) throws IOException {
+        saveNewMessageFromPartner(rawMessageContent.inputStream(), messageId, bpId, messageType, rawMessageContent, contentType);
+    }
 
-            // Save to S3
-            // This will validate the XML at the same time by copying output to the XmlValidatingOutputStream
-            objectStore.storeMessage(BucketType.PARTNER, messageId.toString(), messageContent);
+    public void saveNewMessageFromPartner(InputStream inputStream, UUID messageId, String bpId, String messageType, MessageContent rawMessageContent, String contentType) throws IOException {
+        ScanStatus scanStatus = malwareScanProperties.isEnabled() ? ScanStatus.SCAN_PENDING : ScanStatus.NOT_SCANNED;
+        Map<String, String> tags = tagsService.toMap(bpId, messageType, scanStatus, System.currentTimeMillis());
 
-            if (!malwareScanProperties.isEnabled()) {
-                // Publish ReceivedEvent and events from configured listeners
-                eventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.NOT_SCANNED);
-            } else if (malwareScanTriggerOptional.isPresent()) {
-                malwareScanTriggerOptional.get().triggerScan(messageId.toString(), objectStore.getBucketName(BucketType.PARTNER),
-                        messageContent.inputStream(), messageContent.contentLength());
-            }
+        MessageContent messageContent = new MessageContent(inputStream, rawMessageContent.contentLength(), tags);
+
+        // Save to S3
+        // This will validate the XML at the same time by copying output to the XmlValidatingOutputStream
+        objectStore.storeMessage(BucketType.PARTNER, messageId.toString(), messageContent, contentType);
+
+        if (!malwareScanProperties.isEnabled()) {
+            // Publish ReceivedEvent and events from configured listeners
+            eventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.NOT_SCANNED, contentType);
+        } else
+            malwareScanTriggerOptional.ifPresent(
+                    malwareScanTrigger -> malwareScanTrigger.triggerScan(
+                            messageId.toString(),
+                            objectStore.getBucketName(BucketType.PARTNER),
+                            messageContent.inputStream(),
+                            messageContent.contentLength()));
+    }
+
+    /**
+     * Legacy save with xml validation for internal messages.
+     * This method is kept for backward compatibility.
+     */
+    public void saveNewMessageFromInternalApplicationLegacy(Message message, MessageContent rawMessageContent) throws IOException {
+        UUID messageId = message.getMessageId();
+        String bpId = message.getBpId();
+        try (InputStream inputStream = XmlValidatingOutputStream.wrapInputStreamWithXmlValidation(messageId, bpId, rawMessageContent)) {
+            saveNewMessageFromInternalApplication(inputStream, messageId, bpId, message, rawMessageContent);
         }
     }
 
     public void saveNewMessageFromInternalApplication(Message message, MessageContent rawMessageContent) throws IOException {
-        UUID messageId = message.getMessageId();
-        String bpId = message.getBpId();
+        saveNewMessageFromInternalApplication(rawMessageContent.inputStream(), message.getMessageId(), message.getBpId(), message, rawMessageContent);
+    }
 
-        try (InputStream inputStream = XmlValidatingOutputStream.wrapInputStreamWithXmlValidation(messageId, bpId, rawMessageContent)) {
-            MessageContent messageInfo = new MessageContent(inputStream, rawMessageContent.contentLength());
+    public void saveNewMessageFromInternalApplication(InputStream inputStream, UUID messageId, String bpId, Message message, MessageContent rawMessageContent) throws IOException {
+        MessageContent messageInfo = new MessageContent(inputStream, rawMessageContent.contentLength());
 
-            // Save to S3
-            // This will validate the XML at the same time by copying output to the XmlValidatingOutputStream
-            objectStore.storeMessage(BucketType.INTERNAL, createInternalMessageObjectKey(bpId, messageId), messageInfo);
+        // Save to S3
+        // This will validate the XML at the same time by copying output to the XmlValidatingOutputStream
+        objectStore.storeMessage(BucketType.INTERNAL, createInternalMessageObjectKey(bpId, messageId), messageInfo, message.getContentType());
 
-            // Store message in database
-            messageRepository.save(message);
+        // Store message in database
+        messageRepository.save(message);
 
-            if (messageSentProperties.isEnabled()) {
-                eventPublisher.publishMessageSentEvent(message);
-            }
+        if (messageSentProperties.isEnabled()) {
+            eventPublisher.publishMessageSentEvent(message);
         }
     }
 
@@ -118,26 +184,27 @@ public class MessageExchangeService {
 
     public void onMalwareScanResult(S3ObjectMalwareScanResultInfo scanResultInfo) {
         long messageArrivalTimeInMillis = System.currentTimeMillis();
-        S3ObjectTags s3ObjectTags = updateAndGetValidatedTags(scanResultInfo);
+        S3ObjectMetadata s3ObjectMetadata = updateAndGetValidatedTags(scanResultInfo);
 
-        metricsService.publishMetrics(scanResultInfo.scanResult(), messageArrivalTimeInMillis, s3ObjectTags.saveTimeInMillis());
+        metricsService.publishMetrics(scanResultInfo.scanResult(), messageArrivalTimeInMillis, s3ObjectMetadata.tags().saveTimeInMillis());
 
-        publishMessageReceivedEvent(scanResultInfo.objectKey(), s3ObjectTags);
+        publishMessageReceivedEvent(scanResultInfo.objectKey(), s3ObjectMetadata);
     }
 
-    private void publishMessageReceivedEvent(String objectKey, S3ObjectTags actualTags) {
+    private void publishMessageReceivedEvent(String objectKey, S3ObjectMetadata s3ObjectMetadata) {
         UUID messageId = UUID.fromString(objectKey);
+        S3ObjectTags actualTags = s3ObjectMetadata.tags();
         ScanStatus scanStatus = actualTags.scanStatus();
         PublishedScanStatus externalPublishedScanStatus = scanStatus.toPublishedScanStatus();
 
-        eventPublisher.publishMessageReceivedEvent(messageId, actualTags.bpId(), actualTags.messageType(), externalPublishedScanStatus);
+        eventPublisher.publishMessageReceivedEvent(messageId, actualTags.bpId(), actualTags.messageType(), externalPublishedScanStatus, s3ObjectMetadata.contentType());
     }
 
     private static String createInternalMessageObjectKey(String bpId, UUID messageId) {
         return bpId + "/" + messageId;
     }
 
-    private S3ObjectTags updateAndGetValidatedTags(S3ObjectMalwareScanResultInfo internalScanResult) {
+    private S3ObjectMetadata updateAndGetValidatedTags(S3ObjectMalwareScanResultInfo internalScanResult) {
         ScanStatus scanStatus = ScanStatus.fromScanResult(internalScanResult.scanResult());
         if (scanStatus == ScanStatus.SCAN_FAILED) {
             log.warn("Malware scan failed: {}", internalScanResult);
@@ -147,10 +214,12 @@ public class MessageExchangeService {
         return updateAndGetValidatedTags(bucketName, objectKey, scanStatus);
     }
 
-    private S3ObjectTags updateAndGetValidatedTags(String bucketName, String objectKey, ScanStatus scanStatus) {
+    private S3ObjectMetadata updateAndGetValidatedTags(String bucketName, String objectKey, ScanStatus scanStatus) {
         Map<String, String> tagsToUpdate = tagsService.toMap(scanStatus);
         Map<String, String> actualTags = objectStore.updateTagsAndGetTags(BucketType.PARTNER, bucketName, objectKey, tagsToUpdate);
-        return tagsService.getTagsfromMapAndValidate(bucketName, objectKey, actualTags);
+        return new S3ObjectMetadata(
+                tagsService.getTagsfromMapAndValidate(bucketName, objectKey, actualTags),
+                objectStore.getContentType(BucketType.PARTNER, bucketName, objectKey));
     }
 
     private void checkScanStatus(UUID messageId, MessageContent messageInfoWithTags) {

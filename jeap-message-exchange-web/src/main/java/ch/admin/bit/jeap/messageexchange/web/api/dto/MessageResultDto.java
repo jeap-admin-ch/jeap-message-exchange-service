@@ -10,7 +10,8 @@ public record MessageResultDto(
         UUID messageId,
         String messageType,
         @JsonInclude(NON_EMPTY) String groupId,
-        @JsonInclude(NON_EMPTY) String partnerTopic) {
+        @JsonInclude(NON_EMPTY) String partnerTopic,
+        @JsonInclude(NON_EMPTY) String contentType) {
 
     /**
      * Creates a message search result that does not include the groupId and partnerTopic in the response,
@@ -19,7 +20,10 @@ public record MessageResultDto(
     public static MessageResultDto createV2Dto(ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto domainDto) {
         return new MessageResultDto(
                 domainDto.messageId(),
-                domainDto.messageType(), null, null);
+                domainDto.messageType(),
+                null,
+                null,
+                null);
     }
 
     /**
@@ -30,6 +34,19 @@ public record MessageResultDto(
                 domainDto.messageId(),
                 domainDto.messageType(),
                 domainDto.groupId(),
-                domainDto.partnerTopic());
+                domainDto.partnerTopic(),
+                null);
+    }
+
+    /**
+     * Creates a message search result that includes the contentType in the response.
+     */
+    public static MessageResultDto createV4Dto(ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto domainDto) {
+        return new MessageResultDto(
+                domainDto.messageId(),
+                domainDto.messageType(),
+                domainDto.groupId(),
+                domainDto.partnerTopic(),
+                domainDto.contentType());
     }
 }

@@ -19,6 +19,7 @@ public class B2BMessageReceivedEventBuilder extends AvroDomainEventBuilder<B2BMe
     private String messageId;
     private String type;
     private S3ObjectMalwareScanStatus scanStatus;
+    private String contentType;
 
     private B2BMessageReceivedEventBuilder() {
         super(B2BMessageReceivedEvent::new);
@@ -58,6 +59,10 @@ public class B2BMessageReceivedEventBuilder extends AvroDomainEventBuilder<B2BMe
         return this;
     }
 
+    public B2BMessageReceivedEventBuilder contentType(String contentType) {
+        this.contentType = contentType;
+        return this;
+    }
 
     @Override
     protected B2BMessageReceivedEventBuilder self() {
@@ -80,6 +85,7 @@ public class B2BMessageReceivedEventBuilder extends AvroDomainEventBuilder<B2BMe
                 .setBpId(bpId)
                 .setMessageId(messageId)
                 .setType(type)
+                .setContentType(contentType)
                 .build();
         B2BMessageReceivedEventReferences references = B2BMessageReceivedEventReferences.newBuilder()
                 .setMessageReference(reference)

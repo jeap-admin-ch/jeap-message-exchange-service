@@ -28,6 +28,15 @@ public class OpenApiConfig {
     }
 
     @Bean
+    GroupedOpenApi internalApiV3() {
+        return GroupedOpenApi.builder()
+                .group("MessageExchange-Service-Internal-API-V3")
+                .pathsToMatch("/api/internal/v3/**")
+                .packagesToScan(this.getClass().getPackageName())
+                .build();
+    }
+
+    @Bean
     GroupedOpenApi partnerApiV2() {
         return GroupedOpenApi.builder()
                 .group("MessageExchange-Service-Partner-API-V2")
@@ -41,6 +50,15 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("MessageExchange-Service-Partner-API-V3")
                 .pathsToMatch("/api/partner/v3/**")
+                .packagesToScan(this.getClass().getPackageName())
+                .build();
+    }
+
+    @Bean
+    GroupedOpenApi partnerApiV4() {
+        return GroupedOpenApi.builder()
+                .group("MessageExchange-Service-Partner-API-V4")
+                .pathsToMatch("/api/partner/v4/**")
                 .packagesToScan(this.getClass().getPackageName())
                 .build();
     }

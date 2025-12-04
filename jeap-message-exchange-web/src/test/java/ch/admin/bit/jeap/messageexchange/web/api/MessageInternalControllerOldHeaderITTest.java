@@ -24,11 +24,7 @@ import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -93,10 +89,11 @@ class MessageInternalControllerOldHeaderITTest {
                 .groupId("groupId")
                 .messageType("messageType")
                 .partnerTopic("partnerTopic")
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
 
         verify(messageExchangeService, times(1))
-                .saveNewMessageFromInternalApplication(messageCaptor.capture(), messageContentCaptor.capture());
+                .saveNewMessageFromInternalApplicationLegacy(messageCaptor.capture(), messageContentCaptor.capture());
 
         Message value = messageCaptor.getValue();
         assertThat(value.getMessageId()).isEqualTo(message.getMessageId());
@@ -125,10 +122,11 @@ class MessageInternalControllerOldHeaderITTest {
                 .bpId("bpId")
                 .topicName("topicName")
                 .messageType("messageType")
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
 
         verify(messageExchangeService, times(1))
-                .saveNewMessageFromInternalApplication(messageCaptor.capture(), messageContentCaptor.capture());
+                .saveNewMessageFromInternalApplicationLegacy(messageCaptor.capture(), messageContentCaptor.capture());
 
         Message value = messageCaptor.getValue();
         assertThat(value.getMessageId()).isEqualTo(message.getMessageId());
@@ -151,7 +149,7 @@ class MessageInternalControllerOldHeaderITTest {
                                 .with(authentication(createAuthenticationForUserRoles(B2B_MESSAGE_OUT_WRITE))))
                 .andExpect(status().isBadRequest());
 
-        verify(messageExchangeService, never()).saveNewMessageFromInternalApplication(any(Message.class), any(MessageContent.class));
+        verify(messageExchangeService, never()).saveNewMessageFromInternalApplicationLegacy(any(Message.class), any(MessageContent.class));
 
     }
 
@@ -169,7 +167,7 @@ class MessageInternalControllerOldHeaderITTest {
                                 .with(csrf())) // needed because in this test no bearer token is provided, just the final Spring authentication
                 .andExpect(status().isUnauthorized());
 
-        verify(messageExchangeService, never()).saveNewMessageFromInternalApplication(any(Message.class), any(MessageContent.class));
+        verify(messageExchangeService, never()).saveNewMessageFromInternalApplicationLegacy(any(Message.class), any(MessageContent.class));
 
     }
 
@@ -188,7 +186,7 @@ class MessageInternalControllerOldHeaderITTest {
                                 .with(authentication(createAuthenticationForUserRoles(B2B_MESSAGE_IN_READ))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).saveNewMessageFromInternalApplication(any(Message.class), any(MessageContent.class));
+        verify(messageExchangeService, never()).saveNewMessageFromInternalApplicationLegacy(any(Message.class), any(MessageContent.class));
 
     }
 

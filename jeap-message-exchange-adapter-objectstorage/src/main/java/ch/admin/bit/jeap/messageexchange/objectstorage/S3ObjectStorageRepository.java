@@ -10,10 +10,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -48,7 +45,7 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
         }
     }
 
-    public void putObject(String bucketName, String objectKey, MessageContent messageContent) {
+    public void putObject(String bucketName, String objectKey, MessageContent messageContent, String contentType) {
         long contentLength = messageContent.contentLength();
 
         List<Tag> tagSet = createTags(messageContent.tags());
@@ -56,7 +53,7 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
         PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
-                .contentType(Mimetype.MIMETYPE_XML)
+                .contentType(contentType)
                 .tagging(Tagging.builder()
                         .tagSet(tagSet)
                         .build())
@@ -90,7 +87,7 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
                         .build())
                 .build();
 
-        PutObjectTaggingResponse response = s3Client.putObjectTagging(request);
+        s3Client.putObjectTagging(request);
         log.debug("Tags updated for object {} in bucket {}", objectKey, bucketName);
     }
 

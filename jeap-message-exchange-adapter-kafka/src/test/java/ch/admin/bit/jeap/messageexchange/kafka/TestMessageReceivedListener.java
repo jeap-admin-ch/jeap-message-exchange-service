@@ -17,6 +17,7 @@ public class TestMessageReceivedListener implements MessageReceivedListener {
                 .systemName("junit")
                 .serviceName("junit")
                 .idempotenceId(messageId.toString())
+                .contentType("junit")
                 .build();
 
         return new MessageResult("junit-test", messageReceivedEvent);

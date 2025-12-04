@@ -4,8 +4,6 @@ import ch.admin.bit.jeap.messageexchange.domain.Message;
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
-import ch.admin.bit.jeap.messageexchange.event.message.received.B2BMessageReceivedEvent;
-import ch.admin.bit.jeap.messageexchange.event.message.received.S3ObjectMalwareScanStatus;
 import ch.admin.bit.jeap.messageexchange.event.message.sent.B2BMessageSentEvent;
 import ch.admin.bit.jeap.messaging.kafka.test.KafkaIntegrationTestBase;
 import ch.admin.bit.jeap.messaging.kafka.test.TestKafkaListener;
@@ -15,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -66,8 +65,9 @@ class KafkaMessageSentEventPublisherITTest extends KafkaIntegrationTestBase {
         String topicName = "myTopic";
         String groupId = "myGroup";
         String partnerTopic = "myPartnerTopic";
+        String contentType = MediaType.APPLICATION_XML_VALUE;
 
-        Message message = new Message(BigInteger.valueOf(13), messageId, topicName, bpId, groupId, messageType, LocalDateTime.now(), partnerTopic);
+        Message message = new Message(BigInteger.valueOf(13), messageId, topicName, bpId, groupId, messageType, LocalDateTime.now(), partnerTopic, contentType);
         kafkaEventPublisher.publishMessageSentEvent(message);
 
         Awaitility.await()
@@ -78,6 +78,7 @@ class KafkaMessageSentEventPublisherITTest extends KafkaIntegrationTestBase {
         assertThat(messages.get(0).getReferences().getMessageReference().getBpId()).isEqualTo(bpId);
         assertThat(messages.get(0).getReferences().getMessageReference().getMessageId()).isEqualTo(messageId.toString());
         assertThat(messages.get(0).getReferences().getMessageReference().getType()).isEqualTo(messageType);
+        assertThat(messages.get(0).getReferences().getMessageReference().getContentType()).isEqualTo(contentType);
         assertThat(messages.get(0).getPublisher().getSystem()).isEqualTo("my-system-name");
         assertThat(messages.get(0).getPublisher().getService()).isEqualTo("my-service-name");
         assertThat(messages.get(0).getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());

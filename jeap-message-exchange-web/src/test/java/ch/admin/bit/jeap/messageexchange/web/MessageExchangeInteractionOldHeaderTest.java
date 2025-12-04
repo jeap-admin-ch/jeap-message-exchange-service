@@ -259,7 +259,7 @@ class MessageExchangeInteractionOldHeaderTest extends KafkaIntegrationTestBase {
                 .then()
                 .statusCode(HttpStatus.BAD_REQUEST.value());
 
-        verify(objectStorageRepository, never()).putObject(anyString(), eq(messageId.toString()), any());
+        verify(objectStorageRepository, never()).putObject(anyString(), eq(messageId.toString()), any(), anyString());
     }
 
     @Test
@@ -387,7 +387,7 @@ class MessageExchangeInteractionOldHeaderTest extends KafkaIntegrationTestBase {
                 .then()
                 .statusCode(HttpStatus.BAD_REQUEST.value());
 
-        verify(objectStorageRepository, never()).putObject(anyString(), eq(messageId.toString()), any());
+        verify(objectStorageRepository, never()).putObject(anyString(), eq(messageId.toString()), any(), anyString());
     }
 
     private String createAuthTokenForBpRoles(String bpId, SemanticApplicationRole... roles) {
