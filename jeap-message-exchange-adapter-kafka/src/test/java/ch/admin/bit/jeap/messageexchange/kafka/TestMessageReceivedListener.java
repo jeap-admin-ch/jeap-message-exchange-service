@@ -14,6 +14,7 @@ public class TestMessageReceivedListener implements MessageReceivedListener {
                 .bpId(bpId + "_plugin")
                 .messageId(messageId + "_plugin")
                 .type(type + "_plugin")
+                .variant("junit")
                 .systemName("junit")
                 .serviceName("junit")
                 .idempotenceId(messageId.toString())

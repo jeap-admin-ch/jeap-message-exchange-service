@@ -30,12 +30,15 @@ import static ch.admin.bit.jeap.messageexchange.web.api.DeprecatedHeaderNames.*;
 import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
 import static ch.admin.bit.jeap.messageexchange.web.api.LegacyHeaderHelper.checkVariables;
 
+/**
+ * @deprecated
+ */
 @RestController
 @RequestMapping("/api/internal/v2/messages")
 @RequiredArgsConstructor
 @Slf4j
 @Validated
-@Deprecated // replaced by MessageInternalV3Controller
+@Deprecated(since="4.0.0", forRemoval=true) // replaced by MessageInternalV3Controller
 public class MessageInternalController {
 
     private final MessageExchangeService messageExchangeService;

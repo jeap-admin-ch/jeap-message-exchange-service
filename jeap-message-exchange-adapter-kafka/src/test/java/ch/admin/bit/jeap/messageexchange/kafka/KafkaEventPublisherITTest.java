@@ -74,6 +74,7 @@ class KafkaEventPublisherITTest extends KafkaIntegrationTestBase {
         assertThat(messages.getFirst().getReferences().getMessageReference().getBpId()).isEqualTo(bpId);
         assertThat(messages.getFirst().getReferences().getMessageReference().getMessageId()).isEqualTo(messageId.toString());
         assertThat(messages.getFirst().getReferences().getMessageReference().getType()).isEqualTo(messageType);
+        assertThat(messages.getFirst().getType().getVariant()).isEqualTo(messageType);
         assertThat(messages.getFirst().getPublisher().getSystem()).isEqualTo("my-system-name");
         assertThat(messages.getFirst().getPublisher().getService()).isEqualTo("my-service-name");
         assertThat(messages.getFirst().getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());
@@ -84,6 +85,7 @@ class KafkaEventPublisherITTest extends KafkaIntegrationTestBase {
         assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getBpId()).isEqualTo(bpId + "_plugin");
         assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getMessageId()).isEqualTo(messageId + "_plugin");
         assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getType()).isEqualTo(messageType + "_plugin");
+        assertThat(messagesOnJunitTest.getFirst().getType().getVariant()).isEqualTo("junit");
         assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getContentType()).isEqualTo("junit");
         assertThat(messagesOnJunitTest.getFirst().getPublisher().getSystem()).isEqualTo("junit");
         assertThat(messagesOnJunitTest.getFirst().getPublisher().getService()).isEqualTo("junit");

@@ -13,7 +13,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - This version of the library is **breaking** because a new field is needed in the database schema. See the
   file [./jeap-message-exchange-persistence/src/main/resources/db/migration/V4__add_content_type.sql] for a DDL
   script that performs the schema upgrade from version 3 to version 4.0.0.
-- Update parent from 30.0.0 to 30.0.1
+- Update parent from 30.0.0 to 30.1.0
 
 ## [3.5.0] - 2025-12-03
 

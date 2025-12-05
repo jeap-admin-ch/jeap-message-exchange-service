@@ -35,12 +35,15 @@ import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.HEADER_MESSA
 import static ch.admin.bit.jeap.messageexchange.web.api.QueryParameterNames.*;
 import static org.springframework.util.StringUtils.hasText;
 
+/**
+ * @deprecated
+ */
 @RestController
 @RequiredArgsConstructor
 @Slf4j
 @Validated
 @RequestMapping("/api/partner/v3/messages")
-@Deprecated // replaced by MessagePartnerV4Controller
+@Deprecated(since="4.0.0", forRemoval=true)  // replaced by MessagePartnerV4Controller
 public class MessagePartnerV3Controller {
 
     private static final String MESSAGE_ID = "messageId";

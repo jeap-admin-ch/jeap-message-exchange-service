@@ -75,16 +75,17 @@ class KafkaMessageSentEventPublisherITTest extends KafkaIntegrationTestBase {
                 .until(() -> (messages.size() == 1));
 
         // message sent from mes
-        assertThat(messages.get(0).getReferences().getMessageReference().getBpId()).isEqualTo(bpId);
-        assertThat(messages.get(0).getReferences().getMessageReference().getMessageId()).isEqualTo(messageId.toString());
-        assertThat(messages.get(0).getReferences().getMessageReference().getType()).isEqualTo(messageType);
-        assertThat(messages.get(0).getReferences().getMessageReference().getContentType()).isEqualTo(contentType);
-        assertThat(messages.get(0).getPublisher().getSystem()).isEqualTo("my-system-name");
-        assertThat(messages.get(0).getPublisher().getService()).isEqualTo("my-service-name");
-        assertThat(messages.get(0).getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());
-        assertThat(messages.get(0).getPayload().getTopicName()).isEqualTo(topicName);
-        assertThat(messages.get(0).getPayload().getGroupId()).isEqualTo(groupId);
-        assertThat(messages.get(0).getPayload().getPartnerTopic()).isEqualTo(partnerTopic);
+        assertThat(messages.getFirst().getReferences().getMessageReference().getBpId()).isEqualTo(bpId);
+        assertThat(messages.getFirst().getReferences().getMessageReference().getMessageId()).isEqualTo(messageId.toString());
+        assertThat(messages.getFirst().getReferences().getMessageReference().getType()).isEqualTo(messageType);
+        assertThat(messages.getFirst().getReferences().getMessageReference().getContentType()).isEqualTo(contentType);
+        assertThat(messages.getFirst().getType().getVariant()).isEqualTo(messageType);
+        assertThat(messages.getFirst().getPublisher().getSystem()).isEqualTo("my-system-name");
+        assertThat(messages.getFirst().getPublisher().getService()).isEqualTo("my-service-name");
+        assertThat(messages.getFirst().getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());
+        assertThat(messages.getFirst().getPayload().getTopicName()).isEqualTo(topicName);
+        assertThat(messages.getFirst().getPayload().getGroupId()).isEqualTo(groupId);
+        assertThat(messages.getFirst().getPayload().getPartnerTopic()).isEqualTo(partnerTopic);
 
     }
 
