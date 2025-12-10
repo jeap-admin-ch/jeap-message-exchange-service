@@ -8,7 +8,7 @@ Third-party dependencies grouped by their license type (see [pom.xml](/pom.xml) 
 Apache License Version 2.0
 -------------------------------
 
- * LZ4 Java Compression - [at.yawk.lz4:lz4-java](https://github.com/lz4/lz4-java)
+ * LZ4 Java Compression - [at.yawk.lz4:lz4-java](https://github.com/yawkat/lz4-java)
  * provider - [au.com.dius.pact:provider](https://github.com/pact-foundation/pact-jvm)
  * matchers - [au.com.dius.pact.core:matchers](https://github.com/pact-foundation/pact-jvm)
  * model - [au.com.dius.pact.core:model](https://github.com/pact-foundation/pact-jvm)
