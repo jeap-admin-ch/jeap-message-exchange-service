@@ -59,7 +59,7 @@ import static org.mockito.Mockito.verify;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
         properties = {
-                "server.port=8307",
+                "server.port=8309",
                 "jeap.messageexchange.kafka.topic.message-received=message-received",
                 "jeap.messaging.kafka.error-topic-name=error",
                 "jeap.messaging.kafka.system-name=test",

@@ -6,9 +6,7 @@ import ch.admin.bit.jeap.messageexchange.objectstorage.lifecycle.S3LifecycleConf
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -16,9 +14,8 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
-import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
-import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
 import software.amazon.awssdk.http.urlconnection.ProxyConfiguration;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -26,8 +23,6 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
 import java.net.URI;
-import java.util.Map;
-import java.util.Optional;
 
 import static org.springframework.util.StringUtils.hasText;
 
@@ -74,7 +69,7 @@ public class ObjectStorageConfiguration {
     @Bean
     @ConditionalOnMissingBean(AwsCredentialsProvider.class)
     DefaultCredentialsProvider awsCredentialsProvider() {
-        return DefaultCredentialsProvider.create();
+        return DefaultCredentialsProvider.builder().build();
     }
 
     @Bean
@@ -85,16 +80,14 @@ public class ObjectStorageConfiguration {
     private S3Client createS3Client(S3ObjectStorageConnectionProperties connectionProperties, AwsCredentialsProvider awsCredentialsProvider) {
         log.info("Initializing s3Client with connection properties {}", connectionProperties);
 
-        ClientOverrideConfiguration.Builder overrideConfig = ClientOverrideConfiguration.builder();
-        overrideConfig.advancedOptions(Map.of(SdkAdvancedClientOption.SIGNER, AwsS3V4Signer.create()));
-
         S3Configuration serviceConfiguration = S3Configuration.builder()
-                .checksumValidationEnabled(false)
                 .chunkedEncodingEnabled(true)
                 .build();
 
         S3ClientBuilder s3ClientBuilder = S3Client.builder()
                 .region(connectionProperties.getRegion())
+                .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+                .responseChecksumValidation(ResponseChecksumValidation.WHEN_REQUIRED)
                 .forcePathStyle(true)
                 .httpClientBuilder(UrlConnectionHttpClient.builder()
                         .proxyConfiguration(ProxyConfiguration.builder() // Configure proxy to work around the issue https://github.com/aws/aws-sdk-java-v2/issues/4728 which is coming with the aws sdk update
@@ -104,7 +97,6 @@ public class ObjectStorageConfiguration {
                         .connectionTimeout(connectionProperties.getS3Timeout())
                         .socketTimeout(connectionProperties.getS3Timeout()))
                 .credentialsProvider(createS3CredentialsProvider(awsCredentialsProvider, connectionProperties))
-                .overrideConfiguration(overrideConfig.build())
                 .serviceConfiguration(serviceConfiguration);
 
         String accessUrl = connectionProperties.getAccessUrl();
