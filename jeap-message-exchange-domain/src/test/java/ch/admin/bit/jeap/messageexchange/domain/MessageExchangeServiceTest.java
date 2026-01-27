@@ -1,6 +1,7 @@
 package ch.admin.bit.jeap.messageexchange.domain;
 
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
+import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.PublishedScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.S3ObjectMalwareScanResultInfo;
@@ -131,7 +132,7 @@ class MessageExchangeServiceTest {
 
         messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, new MessageContent(xmlContent, 42));
 
-        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.NOT_SCANNED, MediaType.APPLICATION_XML_VALUE);
+        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, null, null, PublishedScanStatus.NOT_SCANNED, MediaType.APPLICATION_XML_VALUE);
         assertThat(storedMessage).isEqualTo(xmlContentString);
         assertThat(storedTags)
                 .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
@@ -153,7 +154,7 @@ class MessageExchangeServiceTest {
 
         messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, new MessageContent(xmlContent, 42));
 
-        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
+        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
         assertThat(storedMessage).isEqualTo(xmlContentString);
         assertThat(storedTags)
                 .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
@@ -180,7 +181,7 @@ class MessageExchangeServiceTest {
 
         verify(malwareScanTrigger).triggerScan(eq(messageId.toString()), eq(PARTNER_BUCKET_NAME), any(InputStream.class), anyInt());
 
-        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
+        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
         assertThat(storedMessage).isEqualTo(xmlContentString);
         assertThat(storedTags)
                 .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
@@ -201,7 +202,7 @@ class MessageExchangeServiceTest {
 
         assertThrows(InvalidXMLInputException.class, () -> messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, messageContent));
 
-        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
+        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
         assertThat(storedMessage).isNull();
         verify(messageRepository, never()).save(any(Message.class));
     }
@@ -217,9 +218,9 @@ class MessageExchangeServiceTest {
 
         MessageContent messageContent = new MessageContent(xmlContent, 42);
 
-        messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, messageContent, MediaType.APPLICATION_XML_VALUE);
+        messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, null, null, messageContent, MediaType.APPLICATION_XML_VALUE);
 
-        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.NOT_SCANNED, MediaType.APPLICATION_XML_VALUE);
+        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, null, null, PublishedScanStatus.NOT_SCANNED, MediaType.APPLICATION_XML_VALUE);
         assertThat(storedMessage).isEqualTo(xmlContentString);
         assertThat(storedTags)
                 .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
@@ -353,7 +354,7 @@ class MessageExchangeServiceTest {
 
         assertThrows(InvalidXMLInputException.class, () -> messageExchangeService.saveNewMessageFromInternalApplicationLegacy(message, messageContent));
 
-        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
+        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
         assertThat(storedMessage).isNull();
 
         verify(messageRepository, never()).save(message);
@@ -366,10 +367,18 @@ class MessageExchangeServiceTest {
         UUID lastMessageId = UUID.randomUUID();
         String bpId = "bpId";
         UUID messageId = UUID.randomUUID();
-        when(messageRepository.getNextMessageId(lastMessageId, bpId, null, null)).thenReturn(Optional.of(messageId));
+        Message message = Message.builder()
+                .messageId(messageId)
+                .bpId(bpId)
+                .messageType("messageType")
+                .topicName("topicName")
+                .contentType(MediaType.APPLICATION_XML_VALUE)
+                .build();
+
+        when(messageRepository.getNextMessage(lastMessageId, bpId, null, null, null)).thenReturn(Optional.of(message));
         this.storedMessage = "<content>test</content>";
 
-        Optional<NextMessageResultDto> nextMessageContent = messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, null, null);
+        Optional<MessageSearchResultWithContentDto> nextMessageContent = messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, null, null, null);
 
         assertThat(nextMessageContent).isPresent();
         assertThat(nextMessageContent.get().messageId()).isEqualTo(messageId);
@@ -382,7 +391,7 @@ class MessageExchangeServiceTest {
         UUID lastMessageId = UUID.randomUUID();
         String bpId = "bpId";
 
-        Optional<NextMessageResultDto> nextMessageContent = messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, null, null);
+        Optional<MessageSearchResultWithContentDto> nextMessageContent = messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, null, null, null);
 
         assertThat(nextMessageContent).isEmpty();
     }
@@ -406,7 +415,7 @@ class MessageExchangeServiceTest {
         S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(MalwareScanResult.NO_THREATS_FOUND, "bucketName", messageId.toString());
         messageExchangeService.onMalwareScanResult(internalScanResult);
 
-        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.NO_THREATS_FOUND, MediaType.APPLICATION_XML_VALUE);
+        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, null, null, PublishedScanStatus.NO_THREATS_FOUND, MediaType.APPLICATION_XML_VALUE);
 
         assertThat(storedTags)
                 .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
@@ -433,7 +442,7 @@ class MessageExchangeServiceTest {
         S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(MalwareScanResult.FAILED, "bucketName", messageId.toString());
         messageExchangeService.onMalwareScanResult(internalScanResult);
 
-        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.SCAN_FAILED, MediaType.APPLICATION_XML_VALUE);
+        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, bpId, messageType, null, null, PublishedScanStatus.SCAN_FAILED, MediaType.APPLICATION_XML_VALUE);
 
         assertThat(storedTags)
                 .containsKeys("bpId", "messageType", "scanStatus")
@@ -452,7 +461,7 @@ class MessageExchangeServiceTest {
         S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(MalwareScanResult.NO_THREATS_FOUND, "bucketName", messageId.toString());
         assertThrows(IllegalStateException.class, () -> messageExchangeService.onMalwareScanResult(internalScanResult));
 
-        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
+        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
 
         verify(metricsService, never()).publishMetrics(any(MalwareScanResult.class), anyLong(), anyLong());
     }

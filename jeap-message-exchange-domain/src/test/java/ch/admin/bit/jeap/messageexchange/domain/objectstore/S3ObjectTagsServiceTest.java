@@ -14,14 +14,29 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class S3ObjectTagsServiceTest {
 
     @Test
-    void testToMap() {
+    void testToMap_required() {
         S3ObjectTagsService helper = new S3ObjectTagsService();
-        Map<String, String> tags = helper.toMap("bpId123", "messageTypeABC", ScanStatus.NO_THREATS_FOUND, 123456789L);
+        Map<String, String> tags = helper.toMap("bpId123", "messageTypeABC", null, null, ScanStatus.NO_THREATS_FOUND, 123456789L);
 
         assertEquals("bpId123", tags.get("bpId"));
         assertEquals("messageTypeABC", tags.get("messageType"));
         assertEquals("NO_THREATS_FOUND", tags.get("scanStatus"));
         assertEquals("123456789", tags.get("saveTimeInMillis"));
+        assertNull(tags.get("partnerTopic"));
+        assertNull(tags.get("partnerExternalReference"));
+    }
+
+    @Test
+    void testToMap_full() {
+        S3ObjectTagsService helper = new S3ObjectTagsService();
+        Map<String, String> tags = helper.toMap("bpId123", "messageTypeABC", "partnerTopic1", "partnerExternalReferenceTest", ScanStatus.NO_THREATS_FOUND, 123456789L);
+
+        assertEquals("bpId123", tags.get("bpId"));
+        assertEquals("messageTypeABC", tags.get("messageType"));
+        assertEquals("NO_THREATS_FOUND", tags.get("scanStatus"));
+        assertEquals("123456789", tags.get("saveTimeInMillis"));
+        assertEquals("partnerTopic1", tags.get("partnerTopic"));
+        assertEquals("partnerExternalReferenceTest", tags.get("partnerExternalReference"));
     }
 
     @Test
@@ -33,7 +48,7 @@ class S3ObjectTagsServiceTest {
     }
 
     @Test
-    void testGetTagsFromMap() {
+    void testGetTagsFromMap_required() {
         S3ObjectTagsService helper = new S3ObjectTagsService();
         Map<String, String> tags = Map.of(
                 "bpId", "bpId123",
@@ -51,7 +66,29 @@ class S3ObjectTagsServiceTest {
     }
 
     @Test
-    void testGetTagsfromMap_withEmtpyMap() {
+    void testGetTagsFromMap_full() {
+        S3ObjectTagsService helper = new S3ObjectTagsService();
+        Map<String, String> tags = Map.of(
+                "bpId", "bpId123",
+                "messageType", "messageTypeABC",
+                "partnerTopic", "pT123",
+                "partnerExternalReference", "ext1",
+                "scanStatus", "NO_THREATS_FOUND",
+                "saveTimeInMillis", "123456789"
+        );
+
+        S3ObjectTags s3ObjectTags = helper.getTagsfromMap(tags);
+
+        assertEquals("bpId123", s3ObjectTags.bpId());
+        assertEquals("messageTypeABC", s3ObjectTags.messageType());
+        assertEquals("pT123", s3ObjectTags.partnerTopic());
+        assertEquals("ext1", s3ObjectTags.partnerExternalReference());
+        assertEquals(ScanStatus.NO_THREATS_FOUND, s3ObjectTags.scanStatus());
+        assertEquals(123456789L, s3ObjectTags.saveTimeInMillis());
+    }
+
+    @Test
+    void testGetTagsFromMap_withEmptyMap() {
         S3ObjectTagsService helper = new S3ObjectTagsService();
         Map<String, String> tags = Collections.emptyMap();
 
@@ -61,6 +98,8 @@ class S3ObjectTagsServiceTest {
         assertNull(s3ObjectTags.messageType());
         assertNull(s3ObjectTags.scanStatus());
         assertNull(s3ObjectTags.saveTimeInMillis());
+        assertNull(s3ObjectTags.partnerTopic());
+        assertNull(s3ObjectTags.partnerExternalReference());
     }
 
     @Test
@@ -82,7 +121,7 @@ class S3ObjectTagsServiceTest {
     }
 
     @Test
-    void testGetTagsfromMapAndValidate_withEmtpyMap() {
+    void testGetTagsFromMapAndValidate_withEmptyMap() {
         S3ObjectTagsService helper = new S3ObjectTagsService();
         Map<String, String> tags = Collections.emptyMap();
 
@@ -90,7 +129,7 @@ class S3ObjectTagsServiceTest {
     }
 
     @Test
-    void testGetTagsfromMapAndValidate_withBpIdNotSet() {
+    void testGetTagsFromMapAndValidate_withBpIdNotSet() {
         S3ObjectTagsService helper = new S3ObjectTagsService();
         Map<String, String> tags = Map.of(
                 "messageType", "messageTypeABC",
@@ -102,7 +141,7 @@ class S3ObjectTagsServiceTest {
     }
 
     @Test
-    void testGetTagsfromMapAndValidate_withMessageTypeNotSet() {
+    void testGetTagsFromMapAndValidate_withMessageTypeNotSet() {
         S3ObjectTagsService helper = new S3ObjectTagsService();
         Map<String, String> tags = Map.of(
                 "bpId", "bpId123",
@@ -114,7 +153,7 @@ class S3ObjectTagsServiceTest {
     }
 
     @Test
-    void testGetTagsfromMapAndValidate_withScanStatusNotSet() {
+    void testGetTagsFromMapAndValidate_withScanStatusNotSet() {
         S3ObjectTagsService helper = new S3ObjectTagsService();
         Map<String, String> tags = Map.of(
                 "bpId", "bpId123",

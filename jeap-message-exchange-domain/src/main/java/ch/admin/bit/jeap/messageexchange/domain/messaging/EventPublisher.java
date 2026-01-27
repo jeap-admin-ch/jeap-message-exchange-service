@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface EventPublisher {
 
-    void publishMessageReceivedEvent(UUID messageId, String bpId, String type, PublishedScanStatus externalPublishedScanStatus, String contentType);
+    void publishMessageReceivedEvent(UUID messageId, String bpId, String type, String partnerTopic, String partnerExternalReference, PublishedScanStatus externalPublishedScanStatus, String contentType);
 
     void publishMessageSentEvent(Message message);
 }

@@ -61,10 +61,12 @@ class KafkaEventPublisherITTest extends KafkaIntegrationTestBase {
         String bpId = UUID.randomUUID().toString();
         UUID messageId = UUID.randomUUID();
         String messageType = "myMessageType";
+        String partnerTopic = "partner-topic";
+        String partnerExternalReference = "external-ref-123";
         PublishedScanStatus externalPublishedScanStatus = PublishedScanStatus.NO_THREATS_FOUND;
         String contentType = MediaType.APPLICATION_XML_VALUE;
 
-        kafkaEventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, externalPublishedScanStatus, contentType);
+        kafkaEventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, partnerTopic, partnerExternalReference, externalPublishedScanStatus, contentType);
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(30))
@@ -80,6 +82,8 @@ class KafkaEventPublisherITTest extends KafkaIntegrationTestBase {
         assertThat(messages.getFirst().getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());
         assertThat(messages.getFirst().getPayload().getScanStatus()).isEqualTo(S3ObjectMalwareScanStatus.NO_THREATS_FOUND);
         assertThat(messages.getFirst().getReferences().getMessageReference().getContentType()).isEqualTo(contentType);
+        assertThat(messages.getFirst().getReferences().getMessageReference().getPartnerTopic()).isEqualTo(partnerTopic);
+        assertThat(messages.getFirst().getReferences().getMessageReference().getPartnerExternalReference()).isEqualTo(partnerExternalReference);
 
         // message sent from plugin-api listener
         assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getBpId()).isEqualTo(bpId + "_plugin");

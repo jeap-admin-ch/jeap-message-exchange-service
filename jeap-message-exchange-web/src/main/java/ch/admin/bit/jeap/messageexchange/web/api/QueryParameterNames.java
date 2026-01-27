@@ -9,4 +9,5 @@ class QueryParameterNames {
     public static final String QUERY_PARAM_PARTNER_TOPIC = "partnerTopic";
     public static final String QUERY_PARAM_SIZE = "size";
     public static final String QUERY_PARAM_TOPIC_NAME = "topicName";
+    public static final String QUERY_PARAM_PARTNER_EXTERNAL_REFERENCE = "partnerExternalReference";
 }

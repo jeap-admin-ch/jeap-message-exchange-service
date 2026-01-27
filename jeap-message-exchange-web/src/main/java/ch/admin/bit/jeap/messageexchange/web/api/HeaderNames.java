@@ -9,4 +9,6 @@ public class HeaderNames {
     public static final String HEADER_MESSAGE_TYPE = "message-type";
     public static final String HEADER_MESSAGE_ID = "message-id";
     public static final String HEADER_PARTNER_TOPIC = "partner-topic";
+    public static final String HEADER_PARTNER_EXTERNAL_REFERENCE = "partner-external-reference";
+    public static final String HEADER_MES_METADATA = "mes-metadata";
 }

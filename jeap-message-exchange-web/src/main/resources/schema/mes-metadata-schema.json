@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mes-metadata",
+  "description": "Metadata string key-value pairs",
+  "type": "object",
+  "minProperties": 1,
+  "additionalProperties": {
+    "type": "string"
+  }
+}

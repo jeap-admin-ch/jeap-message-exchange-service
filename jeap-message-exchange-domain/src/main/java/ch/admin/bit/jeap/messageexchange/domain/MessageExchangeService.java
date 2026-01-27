@@ -1,9 +1,10 @@
 package ch.admin.bit.jeap.messageexchange.domain;
 
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
+import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
-import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.PublishedScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.S3ObjectMalwareScanResultInfo;
@@ -40,16 +41,16 @@ public class MessageExchangeService {
     private final S3ObjectTagsService tagsService;
     private final Optional<MalwareScanTrigger> malwareScanTriggerOptional;
 
-    public Optional<MessageContent> getMessageFromInternalApplication(String bpId, UUID messageId) {
+    public Optional<MessageContent> getMessageContentFromInternalApplication(String bpId, UUID messageId) {
         try {
-            return getMessageFromInternalApplication(bpId, messageId, null);
+            return getMessageContentFromInternalApplication(bpId, messageId, null);
         } catch (MismatchedContentTypeException e) {
             // This should never happen as we do not check for content type here
             throw new IllegalStateException(e);
         }
     }
 
-    public Optional<MessageContent> getMessageFromInternalApplication(String bpId, UUID messageId, String requestedContentType) throws MismatchedContentTypeException {
+    public Optional<MessageContent> getMessageContentFromInternalApplication(String bpId, UUID messageId, String requestedContentType) throws MismatchedContentTypeException {
         String objectKey = createInternalMessageObjectKey(bpId, messageId);
         log.trace("Retrieve payload for internal message with messageId {} from key {}", messageId, objectKey);
 
@@ -64,18 +65,55 @@ public class MessageExchangeService {
         return objectStore.loadMessage(BucketType.INTERNAL, objectKey);
     }
 
-    public Optional<NextMessageResultDto> getNextMessageFromInternalApplication(UUID lastMessageId, String bpId, String partnerTopic, String topicName) {
-        Optional<UUID> nextMessageId = messageRepository.getNextMessageId(lastMessageId, bpId, partnerTopic, topicName);
+    public Optional<MessageSearchResultWithContentDto> getMessageFromInternalApplication(String bpId, UUID messageId, String requestedContentType) throws MismatchedContentTypeException {
+        Optional<Message> messageOptional = messageRepository.findByBpIdAndMessageId(bpId, messageId);
+        if (messageOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        Message message = messageOptional.get();
+        String objectKey = createInternalMessageObjectKey(bpId, messageId);
+        log.trace("Retrieve payload for internal message with messageId {} from key {}", messageId, objectKey);
+
+        if (requestedContentType != null) {
+            Optional<String> contentTypeOptional = objectStore.getContentType(BucketType.INTERNAL, objectKey);
+            if (contentTypeOptional.isEmpty()) {
+                return Optional.empty();
+            }
+            validateContentType(messageId, contentTypeOptional.get(), requestedContentType);
+        }
+
+        Optional<MessageContent> messageContent = objectStore.loadMessage(BucketType.INTERNAL, objectKey);
+
+        return messageContent.map(content -> new MessageSearchResultWithContentDto(
+                message.getMessageId(),
+                content,
+                message.getPartnerTopic(),
+                message.getPartnerExternalReference(),
+                message.getMetadata()));
+    }
+
+
+    public Optional<MessageSearchResultWithContentDto> getNextMessageFromInternalApplication(UUID lastMessageId, String bpId, String partnerTopic, String topicName, String partnerExternalReference) {
+        Optional<Message> nextMessageId = messageRepository.getNextMessage(lastMessageId, bpId, partnerTopic, topicName, partnerExternalReference);
         if (nextMessageId.isPresent()) {
-            Optional<MessageContent> messageInfo = getMessageFromInternalApplication(bpId, nextMessageId.get());
-            if (messageInfo.isPresent()) {
-                log.trace("Found new message with messageId {} for bpId {} after lastMessageId {}", nextMessageId.get(), bpId, lastMessageId);
-                return Optional.of(new NextMessageResultDto(nextMessageId.get(), messageInfo.get()));
+            Message message = nextMessageId.get();
+            Optional<MessageContent> messageFromInternalApplication = getMessageContentFromInternalApplication(bpId, message.getMessageId());
+            if (messageFromInternalApplication.isPresent()) {
+                log.trace("Found new message with messageId {} for bpId {} after lastMessageId {}", message.getMessageId(), bpId, lastMessageId);
+
+                        return messageFromInternalApplication.map(content -> new MessageSearchResultWithContentDto(
+               message.getMessageId(),
+               content,
+               message.getPartnerTopic(),
+               message.getPartnerExternalReference(),
+               message.getMetadata()));
             }
         }
         log.trace("No new message found for bpId {} after lastMessageId {}", bpId, lastMessageId);
         return Optional.empty();
     }
+
+
 
     public Optional<MessageContent> getMessageFromPartner(UUID messageId) {
         try {
@@ -117,17 +155,17 @@ public class MessageExchangeService {
      */
     public void saveNewMessageFromPartner(UUID messageId, String bpId, String messageType, MessageContent rawMessageContent) throws IOException {
         try (InputStream inputStream = XmlValidatingOutputStream.wrapInputStreamWithXmlValidation(messageId, bpId, rawMessageContent)) {
-            saveNewMessageFromPartner(inputStream, messageId, bpId, messageType, rawMessageContent, MediaType.APPLICATION_XML_VALUE);
+            saveNewMessageFromPartner(inputStream, messageId, bpId, messageType, null, null, rawMessageContent, MediaType.APPLICATION_XML_VALUE);
         }
     }
 
-    public void saveNewMessageFromPartner(UUID messageId, String bpId, String messageType, MessageContent rawMessageContent, String contentType) throws IOException {
-        saveNewMessageFromPartner(rawMessageContent.inputStream(), messageId, bpId, messageType, rawMessageContent, contentType);
+    public void saveNewMessageFromPartner(UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType) throws IOException {
+        saveNewMessageFromPartner(rawMessageContent.inputStream(), messageId, bpId, messageType, partnerTopic, partnerExternalReference, rawMessageContent, contentType);
     }
 
-    public void saveNewMessageFromPartner(InputStream inputStream, UUID messageId, String bpId, String messageType, MessageContent rawMessageContent, String contentType) throws IOException {
+    private void saveNewMessageFromPartner(InputStream inputStream, UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType) throws IOException {
         ScanStatus scanStatus = malwareScanProperties.isEnabled() ? ScanStatus.SCAN_PENDING : ScanStatus.NOT_SCANNED;
-        Map<String, String> tags = tagsService.toMap(bpId, messageType, scanStatus, System.currentTimeMillis());
+        Map<String, String> tags = tagsService.toMap(bpId, messageType, partnerTopic, partnerExternalReference, scanStatus, System.currentTimeMillis());
 
         MessageContent messageContent = new MessageContent(inputStream, rawMessageContent.contentLength(), tags);
 
@@ -137,7 +175,7 @@ public class MessageExchangeService {
 
         if (!malwareScanProperties.isEnabled()) {
             // Publish ReceivedEvent and events from configured listeners
-            eventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, PublishedScanStatus.NOT_SCANNED, contentType);
+            eventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, partnerTopic, partnerExternalReference, PublishedScanStatus.NOT_SCANNED, contentType);
         } else
             malwareScanTriggerOptional.ifPresent(
                     malwareScanTrigger -> malwareScanTrigger.triggerScan(
@@ -178,8 +216,8 @@ public class MessageExchangeService {
         }
     }
 
-    public List<MessageSearchResultDto> getMessages(String bpId, String topicName, String groupId, UUID lastMessageId, String partnerTopic, int size) {
-        return messageRepository.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, size);
+    public List<MessageSearchResultDto> getMessages(String bpId, String topicName, String groupId, UUID lastMessageId, String partnerTopic, String partnerExternalReference, int size) {
+        return messageRepository.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, partnerExternalReference, size);
     }
 
     public void onMalwareScanResult(S3ObjectMalwareScanResultInfo scanResultInfo) {
@@ -197,7 +235,7 @@ public class MessageExchangeService {
         ScanStatus scanStatus = actualTags.scanStatus();
         PublishedScanStatus externalPublishedScanStatus = scanStatus.toPublishedScanStatus();
 
-        eventPublisher.publishMessageReceivedEvent(messageId, actualTags.bpId(), actualTags.messageType(), externalPublishedScanStatus, s3ObjectMetadata.contentType());
+        eventPublisher.publishMessageReceivedEvent(messageId, actualTags.bpId(), actualTags.messageType(), actualTags.partnerTopic(), actualTags.partnerExternalReference(), externalPublishedScanStatus, s3ObjectMetadata.contentType());
     }
 
     private static String createInternalMessageObjectKey(String bpId, UUID messageId) {

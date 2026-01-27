@@ -2,6 +2,7 @@ package ch.admin.bit.jeap.messageexchange.web.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import java.util.Map;
 import java.util.UUID;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY;
@@ -11,7 +12,9 @@ public record MessageResultDto(
         String messageType,
         @JsonInclude(NON_EMPTY) String groupId,
         @JsonInclude(NON_EMPTY) String partnerTopic,
-        @JsonInclude(NON_EMPTY) String contentType) {
+        @JsonInclude(NON_EMPTY) String contentType,
+        @JsonInclude(NON_EMPTY) String partnerExternalReference,
+        @JsonInclude(NON_EMPTY) Map<String, String> metadata) {
 
     /**
      * Creates a message search result that does not include the groupId and partnerTopic in the response,
@@ -21,6 +24,8 @@ public record MessageResultDto(
         return new MessageResultDto(
                 domainDto.messageId(),
                 domainDto.messageType(),
+                null,
+                null,
                 null,
                 null,
                 null);
@@ -35,6 +40,8 @@ public record MessageResultDto(
                 domainDto.messageType(),
                 domainDto.groupId(),
                 domainDto.partnerTopic(),
+                null,
+                null,
                 null);
     }
 
@@ -47,6 +54,8 @@ public record MessageResultDto(
                 domainDto.messageType(),
                 domainDto.groupId(),
                 domainDto.partnerTopic(),
-                domainDto.contentType());
+                domainDto.contentType(),
+                domainDto.partnerExternalReference(),
+                domainDto.metadata() == null || domainDto.metadata().isEmpty() ? null : new java.util.TreeMap<>(domainDto.metadata()));
     }
 }

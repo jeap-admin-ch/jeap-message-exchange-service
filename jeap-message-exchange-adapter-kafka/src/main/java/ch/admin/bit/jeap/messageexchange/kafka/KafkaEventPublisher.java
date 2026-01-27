@@ -33,10 +33,10 @@ public class KafkaEventPublisher implements EventPublisher {
     private final List<MessageReceivedListener> messageReceivedListeners;
 
     @Override
-    public void publishMessageReceivedEvent(UUID messageId, String bpId, String type, PublishedScanStatus externalPublishedScanStatus, String contentType) {
+    public void publishMessageReceivedEvent(UUID messageId, String bpId, String type, String partnerTopic, String partnerExternalReference, PublishedScanStatus externalPublishedScanStatus, String contentType) {
         List<CompletableFuture<SendResult<AvroMessageKey, AvroMessage>>> sendResults = new ArrayList<>();
         S3ObjectMalwareScanStatus scanStatus = mapStatus(externalPublishedScanStatus);
-        MessageResult b2BMessageReceivedEvent = getB2BMessageReceivedEvent(messageId, bpId, type, scanStatus, contentType);
+        MessageResult b2BMessageReceivedEvent = getB2BMessageReceivedEvent(messageId, bpId, type, partnerTopic, partnerExternalReference, scanStatus, contentType);
         log.debug("Publishing event {} to topic {}.", b2BMessageReceivedEvent, b2BMessageReceivedEvent.topicName());
         sendResults.add(kafkaTemplate.send(b2BMessageReceivedEvent.topicName(), b2BMessageReceivedEvent.message()));
 
@@ -60,13 +60,15 @@ public class KafkaEventPublisher implements EventPublisher {
         kafkaTemplate.send(topicName, messageSentEvent);
     }
 
-    private MessageResult getB2BMessageReceivedEvent(UUID messageId, String bpId, String type, S3ObjectMalwareScanStatus scanStatus, String contentType) {
+    private MessageResult getB2BMessageReceivedEvent(UUID messageId, String bpId, String type, String partnerTopic, String partnerExternalReference, S3ObjectMalwareScanStatus scanStatus, String contentType) {
         B2BMessageReceivedEvent messageReceivedEvent = B2BMessageReceivedEventBuilder.create()
                 .bpId(bpId)
                 .messageId(messageId.toString())
                 .type(type)
                 .variant(type)
                 .scanStatus(scanStatus)
+                .partnerTopic(partnerTopic)
+                .partnerExternalReference(partnerExternalReference)
                 .contentType(contentType)
                 .systemName(kafkaProperties.getSystemName())
                 .serviceName(kafkaProperties.getServiceName())

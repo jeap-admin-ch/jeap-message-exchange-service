@@ -2,13 +2,14 @@ package ch.admin.bit.jeap.messageexchange.web.api;
 
 import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.domain.MessageExchangeService;
-import ch.admin.bit.jeap.messageexchange.domain.NextMessageResultDto;
+import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
 import ch.admin.bit.jeap.security.resource.semanticAuthentication.SemanticApplicationRole;
 import ch.admin.bit.jeap.security.resource.token.JeapAuthenticationToken;
 import ch.admin.bit.jeap.security.test.resource.JeapAuthenticationTestTokenBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,11 +25,10 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.ByteArrayInputStream;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
+import static ch.admin.bit.jeap.messageexchange.web.api.QueryParameterNames.QUERY_PARAM_PARTNER_EXTERNAL_REFERENCE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -73,7 +73,7 @@ class MessagePartnerV4ControllerITTest {
                 .andExpect(status().isCreated());
 
         verify(messageExchangeService, times(1))
-                .saveNewMessageFromPartner(eq(messageId), eq(bpId), eq("messageType"), any(), eq(MediaType.APPLICATION_XML_VALUE));
+                .saveNewMessageFromPartner(eq(messageId), eq(bpId), eq("messageType"), eq(null), eq(null), any(), eq(MediaType.APPLICATION_XML_VALUE));
     }
 
     @Test
@@ -86,7 +86,7 @@ class MessagePartnerV4ControllerITTest {
                 .andExpect(status().isCreated());
 
         verify(messageExchangeService, times(1))
-                .saveNewMessageFromPartner(eq(messageId), eq(bpId), eq("messageType"), any(), eq(MediaType.APPLICATION_YAML_VALUE));
+                .saveNewMessageFromPartner(eq(messageId), eq(bpId), eq("messageType"), eq(null), eq(null), any(), eq(MediaType.APPLICATION_YAML_VALUE));
     }
 
     @Test
@@ -98,7 +98,7 @@ class MessagePartnerV4ControllerITTest {
         performPutMessage(messageId.toString(), bpId, messageType, XML_CONTENT, createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE), MediaType.APPLICATION_JSON_VALUE)
                 .andExpect(status().isNotAcceptable());
 
-        verify(messageExchangeService, never()).saveNewMessageFromPartner(eq(messageId), eq(bpId), anyString(), any(), anyString());
+        verify(messageExchangeService, never()).saveNewMessageFromPartner(eq(messageId), eq(bpId), anyString(), anyString(), anyString(), any(), anyString());
     }
 
     @Test
@@ -170,7 +170,7 @@ class MessagePartnerV4ControllerITTest {
         String messageType = "messageType";
         String xmlContent = "dummy";
         doThrow(InvalidXMLInputException.invalid(UUID.randomUUID(), bpId, mock(XMLStreamException.class)))
-                .when(messageExchangeService).saveNewMessageFromPartner(eq(messageId), eq(bpId), eq(messageType), any(), anyString());
+                .when(messageExchangeService).saveNewMessageFromPartner(eq(messageId), eq(bpId), eq(messageType), eq(null), eq(null), any(), anyString());
 
         performPutMessage(messageId.toString(), bpId, messageType, xmlContent, createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))
                 .andExpect(status().isBadRequest());
@@ -203,7 +203,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles(UUID.randomUUID().toString(), B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isBadRequest());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -217,7 +217,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -231,7 +231,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForUserRoles(B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -244,7 +244,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles("dummy", B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -256,7 +256,7 @@ class MessagePartnerV4ControllerITTest {
                                 .contentType(MediaType.APPLICATION_XML_VALUE))
                 .andExpect(status().isUnauthorized());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -264,8 +264,9 @@ class MessagePartnerV4ControllerITTest {
         UUID messageId = UUID.randomUUID();
         String requestBpId = UUID.randomUUID().toString(); // any business partner id
         MessageContent messageContent = new MessageContent(new ByteArrayInputStream("123".getBytes(UTF_8)), 3);
+        MessageSearchResultWithContentDto message= new MessageSearchResultWithContentDto(messageId, messageContent,null, null, null);
         when(messageExchangeService.getMessageFromInternalApplication(requestBpId, messageId, MediaType.APPLICATION_XML_VALUE))
-                .thenReturn(Optional.of(messageContent));
+                .thenReturn(Optional.of(message));
 
         mockMvc.perform(
                         get("/api/partner/v4/messages/{messageId}", messageId)
@@ -280,26 +281,56 @@ class MessagePartnerV4ControllerITTest {
         UUID messageId = UUID.randomUUID();
         String bpId = UUID.randomUUID().toString();
         MessageContent messageContent = new MessageContent(new ByteArrayInputStream("123".getBytes(UTF_8)), 3);
+        MessageSearchResultWithContentDto message = new MessageSearchResultWithContentDto(messageId, messageContent,null, null, null);
         when(messageExchangeService.getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE))
-                .thenReturn(Optional.of(messageContent));
+                .thenReturn(Optional.of(message));
 
         mockMvc.perform(
                         get("/api/partner/v4/messages/{messageId}", messageId)
                                 .header(HEADER_BP_ID, bpId)
                                 .accept(MediaType.APPLICATION_XML_VALUE)
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist(HEADER_MES_METADATA))
+                .andExpect(header().doesNotExist(HEADER_PARTNER_TOPIC))
+                .andExpect(header().doesNotExist(HEADER_PARTNER_EXTERNAL_REFERENCE));
 
         verify(messageExchangeService, times(1))
                 .getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE);
     }
 
     @Test
+    void getMessage_whenPresentWithAllHeaders_thenReturnsContent() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        String bpId = UUID.randomUUID().toString();
+        MessageContent messageContent = new MessageContent(new ByteArrayInputStream("123".getBytes(UTF_8)), 3);
+        Map<String, String> metadata = Map.of("myKey", "myValue", "foo", "bar");
+        String metadataBase64 = Base64.getEncoder().encodeToString(new ObjectMapper().writeValueAsString(metadata).getBytes());
+        MessageSearchResultWithContentDto message = new MessageSearchResultWithContentDto(messageId, messageContent,"myTopic", "externalReference", metadata);
+        when(messageExchangeService.getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE))
+                .thenReturn(Optional.of(message));
+
+        mockMvc.perform(
+                        get("/api/partner/v4/messages/{messageId}", messageId)
+                                .header(HEADER_BP_ID, bpId)
+                                .accept(MediaType.APPLICATION_XML_VALUE)
+                                .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HEADER_MES_METADATA, metadataBase64))
+                .andExpect(header().string(HEADER_PARTNER_TOPIC, "myTopic"))
+                .andExpect(header().string(HEADER_PARTNER_EXTERNAL_REFERENCE, "externalReference"));
+
+        verify(messageExchangeService, times(1))
+                .getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE);
+    }
+
+
+    @Test
     void getMessage_whenAcceptHeaderNotPresent_thenReturnsBadRequest() throws Exception {
         UUID messageId = UUID.randomUUID();
         String bpId = UUID.randomUUID().toString();
         MessageContent messageContent = new MessageContent(new ByteArrayInputStream("123".getBytes(UTF_8)), 3);
-        when(messageExchangeService.getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE))
+        when(messageExchangeService.getMessageContentFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE))
                 .thenReturn(Optional.of(messageContent));
 
         mockMvc.perform(
@@ -308,7 +339,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isBadRequest());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(), anyString());
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(), anyString());
     }
 
     @Test
@@ -349,7 +380,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles(UUID.randomUUID().toString(), B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isBadRequest());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -361,7 +392,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -373,7 +404,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForUserRoles(B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -384,7 +415,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles("dummy", B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -394,7 +425,7 @@ class MessagePartnerV4ControllerITTest {
                                 .header(HEADER_BP_ID, UUID.randomUUID().toString()))
                 .andExpect(status().isUnauthorized());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -402,9 +433,9 @@ class MessagePartnerV4ControllerITTest {
         String bpId = UUID.randomUUID().toString();
         UUID message1Id = UUID.randomUUID();
         UUID message2Id = UUID.randomUUID();
-        when(messageExchangeService.getMessages(bpId, null, null, null, null, 1000))
-                .thenReturn(List.of(new MessageSearchResultDto(message1Id, "type1", MediaType.APPLICATION_XML_VALUE, null, null),
-                        new MessageSearchResultDto(message2Id, "type2", MediaType.APPLICATION_XML_VALUE, "groupId2", "partnerTopic2")));
+        when(messageExchangeService.getMessages(bpId, null, null, null, null, null, 1000))
+                .thenReturn(List.of(new MessageSearchResultDto(message1Id, "type1", MediaType.APPLICATION_XML_VALUE, null, null, null, null),
+                        new MessageSearchResultDto(message2Id, "type2", MediaType.APPLICATION_XML_VALUE, "groupId2", "partnerTopic2", null, null)));
 
         mockMvc.perform(
                         get("/api/partner/v4/messages/")
@@ -415,7 +446,7 @@ class MessagePartnerV4ControllerITTest {
                                             "\",\"messageType\":\"type1\",\"contentType\":\"application/xml\"},{\"messageId\":\"" + message2Id +
                                             "\",\"messageType\":\"type2\",\"groupId\":\"groupId2\",\"partnerTopic\":\"partnerTopic2\",\"contentType\":\"application/xml\"}]}"));
 
-        verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, 1000);
+        verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, null, 1000);
     }
 
     @Test
@@ -423,9 +454,9 @@ class MessagePartnerV4ControllerITTest {
         String bpId = UUID.randomUUID().toString();
         UUID message1Id = UUID.randomUUID();
         UUID message2Id = UUID.randomUUID();
-        when(messageExchangeService.getMessages(bpId, null, null, null, null, 1000))
-                .thenReturn(List.of(new MessageSearchResultDto(message1Id, "type1", MediaType.APPLICATION_XML_VALUE, null, null),
-                        new MessageSearchResultDto(message2Id, "type2", MediaType.APPLICATION_YAML_VALUE, "groupId2", "partnerTopic2")));
+        when(messageExchangeService.getMessages(bpId, null, null, null, null, null, 1000))
+                .thenReturn(List.of(new MessageSearchResultDto(message1Id, "type1", MediaType.APPLICATION_XML_VALUE, null, null, null, null),
+                        new MessageSearchResultDto(message2Id, "type2", MediaType.APPLICATION_YAML_VALUE, "groupId2", "partnerTopic2", null, null)));
 
         mockMvc.perform(
                         get("/api/partner/v4/messages/")
@@ -436,7 +467,33 @@ class MessagePartnerV4ControllerITTest {
                                             "\",\"messageType\":\"type1\",\"contentType\":\"application/xml\"},{\"messageId\":\"" + message2Id +
                                             "\",\"messageType\":\"type2\",\"groupId\":\"groupId2\",\"partnerTopic\":\"partnerTopic2\",\"contentType\":\"application/yaml\"}]}"));
 
-        verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, 1000);
+        verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, null, 1000);
+    }
+
+    @Test
+    void getMessages_whenRequestOkWithAllHeaders_thenReturnsResults() throws Exception {
+        String bpId = UUID.randomUUID().toString();
+        UUID message1Id = UUID.randomUUID();
+        UUID message2Id = UUID.randomUUID();
+
+        Map<String, String> metadata1 = Map.of("myKey", "myValue", "foo", "bar");
+        Map<String, String> metadata2 = Map.of("test1", "test2", "test3", "test4");
+
+        when(messageExchangeService.getMessages(bpId, null, null, null, null, "extRef", 1000))
+                .thenReturn(List.of(new MessageSearchResultDto(message1Id, "type1", MediaType.APPLICATION_XML_VALUE, null, null, "ext1", metadata1),
+                        new MessageSearchResultDto(message2Id, "type2", MediaType.APPLICATION_YAML_VALUE, "groupId2", "partnerTopic2", "ext2", metadata2)));
+
+        mockMvc.perform(
+                        get("/api/partner/v4/messages/")
+                                .header(HEADER_BP_ID, bpId)
+                                .param(QUERY_PARAM_PARTNER_EXTERNAL_REFERENCE, "extRef")
+                                .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        "{\"messages\":[{\"messageId\":\"" + message1Id + "\",\"messageType\":\"type1\",\"contentType\":\"application/xml\",\"partnerExternalReference\":\"ext1\",\"metadata\":{\"foo\":\"bar\",\"myKey\":\"myValue\"}}," +
+                                "{\"messageId\":\"" + message2Id + "\",\"messageType\":\"type2\",\"groupId\":\"groupId2\",\"partnerTopic\":\"partnerTopic2\",\"contentType\":\"application/yaml\",\"partnerExternalReference\":\"ext2\",\"metadata\":{\"test1\":\"test2\",\"test3\":\"test4\"}}]}"));
+
+        verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, "extRef", 1000);
     }
 
     @Test
@@ -449,8 +506,8 @@ class MessagePartnerV4ControllerITTest {
         String partnerTopic = "partnerTopic";
         int size = 3;
 
-        when(messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, size))
-                .thenReturn(List.of(new MessageSearchResultDto(messageId, "type", MediaType.APPLICATION_XML_VALUE, null, null)));
+        when(messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, null, size))
+                .thenReturn(List.of(new MessageSearchResultDto(messageId, "type", MediaType.APPLICATION_XML_VALUE, null, null, null, null)));
 
         mockMvc.perform(
                         get("/api/partner/v4/messages")
@@ -464,13 +521,13 @@ class MessagePartnerV4ControllerITTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("{\"messages\":[{\"messageId\":\"" + messageId + "\",\"messageType\":\"type\",\"contentType\":\"application/xml\"}]}"));
 
-        verify(messageExchangeService, times(1)).getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, size);
+        verify(messageExchangeService, times(1)).getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, null, size);
     }
 
     @Test
     void getMessages_whenRequestOkButNoResults_thenReturnsEmptyList() throws Exception {
         String bpId = UUID.randomUUID().toString();
-        when(messageExchangeService.getMessages(bpId, null, null, null, null, 1000)).thenReturn(List.of());
+        when(messageExchangeService.getMessages(bpId, null, null, null, null, null, 1000)).thenReturn(List.of());
 
         mockMvc.perform(
                         get("/api/partner/v4/messages")
@@ -479,7 +536,7 @@ class MessagePartnerV4ControllerITTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("{\"messages\":[]}"));
 
-        verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, 1000);
+        verify(messageExchangeService, times(1)).getMessages(bpId, null, null, null, null, null, 1000);
     }
 
     @Test
@@ -491,7 +548,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles(UUID.randomUUID().toString(), B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isBadRequest());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -504,7 +561,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -517,7 +574,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForUserRoles(B2B_MESSAGE_IN_WRITE))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -529,7 +586,7 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles("dummy", B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isForbidden());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -540,7 +597,7 @@ class MessagePartnerV4ControllerITTest {
                                 .header(HEADER_BP_ID, UUID.randomUUID().toString()))
                 .andExpect(status().isUnauthorized());
 
-        verify(messageExchangeService, never()).getMessageFromInternalApplication(anyString(), any(UUID.class));
+        verify(messageExchangeService, never()).getMessageContentFromInternalApplication(anyString(), any(UUID.class));
     }
 
     @Test
@@ -550,8 +607,8 @@ class MessagePartnerV4ControllerITTest {
         byte[] bytes = "<content>test</content>".getBytes(UTF_8);
         MessageContent message = new MessageContent(new ByteArrayInputStream(bytes), bytes.length);
         UUID messageIdFromDatabase = UUID.randomUUID();
-        NextMessageResultDto nextMessageResultDto = new NextMessageResultDto(messageIdFromDatabase, message);
-        when(messageExchangeService.getNextMessageFromInternalApplication(messageId, bpId, null, null)).thenReturn(Optional.of(nextMessageResultDto));
+        MessageSearchResultWithContentDto messageSearchResultWithContentDto = new MessageSearchResultWithContentDto(messageIdFromDatabase, message,null, null, null);
+        when(messageExchangeService.getNextMessageFromInternalApplication(messageId, bpId, null, null, null)).thenReturn(Optional.of(messageSearchResultWithContentDto));
 
         mockMvc.perform(
                         get("/api/partner/v4/messages/{messageId}/next", messageId)
@@ -559,9 +616,39 @@ class MessagePartnerV4ControllerITTest {
                                 .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
                 .andExpect(status().isOk())
                 .andExpect(content().string("<content>test</content>"))
-                .andExpect(header().string(HEADER_MESSAGE_ID, messageIdFromDatabase.toString()));
+                .andExpect(header().string(HEADER_MESSAGE_ID, messageIdFromDatabase.toString()))
+                .andExpect(header().doesNotExist(HEADER_MES_METADATA))
+                .andExpect(header().doesNotExist(HEADER_PARTNER_TOPIC))
+                .andExpect(header().doesNotExist(HEADER_PARTNER_EXTERNAL_REFERENCE));
 
-        verify(messageExchangeService, times(1)).getNextMessageFromInternalApplication(messageId, bpId, null, null);
+        verify(messageExchangeService, times(1)).getNextMessageFromInternalApplication(messageId, bpId, null, null, null);
+    }
+
+    @Test
+    void getNextMessage_whenRequestOkWithAllHeaders_thenReturnsResult() throws Exception {
+        String bpId = UUID.randomUUID().toString();
+        UUID messageId = UUID.randomUUID();
+        byte[] bytes = "<content>test</content>".getBytes(UTF_8);
+        MessageContent message = new MessageContent(new ByteArrayInputStream(bytes), bytes.length);
+        UUID messageIdFromDatabase = UUID.randomUUID();
+        Map<String, String> metadata = Map.of("myKey", "myValue", "foo", "bar");
+        String metadataBase64 = Base64.getEncoder().encodeToString(new ObjectMapper().writeValueAsString(metadata).getBytes());
+        MessageSearchResultWithContentDto messageSearchResultWithContentDto = new MessageSearchResultWithContentDto(messageIdFromDatabase, message,"myTopic", "extRef", metadata);
+        when(messageExchangeService.getNextMessageFromInternalApplication(messageId, bpId, null, null, "extRef")).thenReturn(Optional.of(messageSearchResultWithContentDto));
+
+        mockMvc.perform(
+                        get("/api/partner/v4/messages/{messageId}/next", messageId)
+                                .header(HEADER_BP_ID, bpId)
+                                .param(QUERY_PARAM_PARTNER_EXTERNAL_REFERENCE, "extRef")
+                                .with(authentication(createAuthenticationForBpRoles(bpId, B2B_MESSAGE_OUT_READ))))
+                .andExpect(status().isOk())
+                .andExpect(content().string("<content>test</content>"))
+                .andExpect(header().string(HEADER_MESSAGE_ID, messageIdFromDatabase.toString()))
+                .andExpect(header().string(HEADER_MES_METADATA, metadataBase64))
+                .andExpect(header().string(HEADER_PARTNER_TOPIC, "myTopic"))
+                .andExpect(header().string(HEADER_PARTNER_EXTERNAL_REFERENCE, "extRef"));
+
+        verify(messageExchangeService, times(1)).getNextMessageFromInternalApplication(messageId, bpId, null, null, "extRef");
     }
 
     private JeapAuthenticationToken createAuthenticationForBpRoles(String bpId, SemanticApplicationRole... roles) {

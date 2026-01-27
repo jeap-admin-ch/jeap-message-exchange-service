@@ -3,6 +3,7 @@ package ch.admin.bit.jeap.messageexchange.web.api;
 import ch.admin.bit.jeap.messageexchange.domain.Message;
 import ch.admin.bit.jeap.messageexchange.domain.MessageExchangeService;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
+import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidMetadataException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.MissingRequiredHeaderException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.UnsupportedMediaTypeException;
 import ch.admin.bit.jeap.messageexchange.web.api.mdc.MessageIdBpIdMdcCloseable;
@@ -22,10 +23,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 
 import static ch.admin.bit.jeap.messageexchange.web.api.DeprecatedHeaderNames.*;
@@ -41,6 +44,7 @@ public class MessageInternalV3Controller {
 
     private final MessageExchangeService messageExchangeService;
     private final ControllerStreams controllerStreams;
+    private final MetadataConverter metadataConverter;
 
     @PutMapping(value = "/{messageId}")
     @Operation(summary = "Sends a new message to a business partner",
@@ -59,8 +63,9 @@ public class MessageInternalV3Controller {
             @RequestHeader(value = HEADER_PARTNER_TOPIC, required = false) @Parameter(description = "Partner Topic") String partnerTopic,
             @RequestHeader(value = HEADER_PARTNER_TOPIC_OLD, required = false) @Parameter(description = "Partner Topic") String partnerTopicOld,
             @RequestHeader(HttpHeaders.CONTENT_TYPE) @Parameter(description = "Content-Type of the message body") String contentTypeHeader,
-            HttpServletRequest request) throws IOException, MissingRequiredHeaderException, UnsupportedMediaTypeException {
-
+            @RequestHeader(value = HEADER_PARTNER_EXTERNAL_REFERENCE, required = false) @Parameter(description = "Partner External Reference") String partnerExternalReference,
+            @RequestHeader(value = HEADER_MES_METADATA, required = false) @Parameter(description = "Metadata") String metadata,
+            HttpServletRequest request) throws IOException, MissingRequiredHeaderException, UnsupportedMediaTypeException, InvalidMetadataException {
         String contentType = controllerStreams.validateContentType(contentTypeHeader);
         bpId = checkVariables(bpId, bpIdOld, HEADER_BP_ID_OLD, HEADER_BP_ID, true);
         messageType = checkVariables(messageType, messageTypeOld, HEADER_MESSAGE_TYPE_OLD, HEADER_MESSAGE_TYPE, true);
@@ -75,6 +80,8 @@ public class MessageInternalV3Controller {
                     .messageType(messageType)
                     .partnerTopic(partnerTopic)
                     .contentType(contentType)
+                    .partnerExternalReference(partnerExternalReference)
+                    .metadata(getMetadataAsJson(metadata))
                     .build();
 
             log.info("Send new message {} with size {} to partner", message, request.getContentLength());
@@ -83,6 +90,13 @@ public class MessageInternalV3Controller {
             log.debug("Message with messageId {} successfully saved", messageId);
             return new ResponseEntity<>(HttpStatus.CREATED);
         }
+    }
+
+    private Map<String,String> getMetadataAsJson(String metadata) throws InvalidMetadataException {
+        if (StringUtils.hasText(metadata)) {
+            return metadataConverter.convertToJson(metadata);
+        }
+        return null;
     }
 
     @GetMapping(value = "/{messageId}")

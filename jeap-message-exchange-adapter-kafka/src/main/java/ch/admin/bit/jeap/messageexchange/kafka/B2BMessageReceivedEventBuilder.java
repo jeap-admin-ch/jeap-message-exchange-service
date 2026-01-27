@@ -19,6 +19,8 @@ public class B2BMessageReceivedEventBuilder extends AvroDomainEventBuilder<B2BMe
     private String messageId;
     private String type;
     private S3ObjectMalwareScanStatus scanStatus;
+    private String partnerTopic;
+    private String partnerExternalReference;
     private String contentType;
 
     private B2BMessageReceivedEventBuilder() {
@@ -59,6 +61,16 @@ public class B2BMessageReceivedEventBuilder extends AvroDomainEventBuilder<B2BMe
         return this;
     }
 
+    public B2BMessageReceivedEventBuilder partnerTopic(String partnerTopic) {
+        this.partnerTopic = partnerTopic;
+        return this;
+    }
+
+    public B2BMessageReceivedEventBuilder partnerExternalReference(String partnerExternalReference) {
+        this.partnerExternalReference = partnerExternalReference;
+        return this;
+    }
+
     public B2BMessageReceivedEventBuilder contentType(String contentType) {
         this.contentType = contentType;
         return this;
@@ -86,6 +98,8 @@ public class B2BMessageReceivedEventBuilder extends AvroDomainEventBuilder<B2BMe
                 .setMessageId(messageId)
                 .setType(type)
                 .setContentType(contentType)
+                .setPartnerTopic(partnerTopic)
+                .setPartnerExternalReference(partnerExternalReference)
                 .build();
         B2BMessageReceivedEventReferences references = B2BMessageReceivedEventReferences.newBuilder()
                 .setMessageReference(reference)

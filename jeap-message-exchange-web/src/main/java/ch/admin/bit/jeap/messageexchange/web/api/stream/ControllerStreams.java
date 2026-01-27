@@ -10,12 +10,13 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.List;
 
 import static ch.admin.bit.jeap.messageexchange.web.api.DeprecatedHeaderNames.HEADER_MESSAGE_ID_OLD;
-import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.HEADER_MESSAGE_ID;
+import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
 
 @Slf4j
 @Component
@@ -42,11 +43,26 @@ public class ControllerStreams {
                 .body(new InputStreamResource(messageContent.inputStream()));
     }
 
-    public static ResponseEntity<InputStreamResource> toResponseWithMessageIdHeader(MessageContent messageContent, String messageId) {
-        return ResponseEntity.ok()
-                .header(HEADER_MESSAGE_ID, messageId)
-                .contentLength(messageContent.contentLength())
-                .body(new InputStreamResource(messageContent.inputStream()));
+    public static ResponseEntity<InputStreamResource> toResponseWithHeaders(MessageContent messageContent,
+                                                                            String messageId,
+                                                                            String partnerTopic,
+                                                                            String partnerExternalReference,
+                                                                            String metadata) {
+        //messageId is mandatory
+        ResponseEntity.BodyBuilder header = ResponseEntity.ok()
+                .header(HEADER_MESSAGE_ID, messageId);
+
+        //Optional headers
+        if (StringUtils.hasText(partnerTopic)){
+            header.header(HEADER_PARTNER_TOPIC, partnerTopic);
+        }
+        if (StringUtils.hasText(partnerExternalReference)){
+            header.header(HEADER_PARTNER_EXTERNAL_REFERENCE, partnerExternalReference);
+        }
+        if (StringUtils.hasText(metadata)){
+            header.header(HEADER_MES_METADATA, metadata);
+        }
+        return header.contentLength(messageContent.contentLength()).body(new InputStreamResource(messageContent.inputStream()));
     }
 
     public MessageContent getRequestContent(HttpServletRequest request) throws IOException {

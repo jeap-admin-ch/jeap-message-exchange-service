@@ -67,7 +67,7 @@ class KafkaMessageSentEventPublisherITTest extends KafkaIntegrationTestBase {
         String partnerTopic = "myPartnerTopic";
         String contentType = MediaType.APPLICATION_XML_VALUE;
 
-        Message message = new Message(BigInteger.valueOf(13), messageId, topicName, bpId, groupId, messageType, LocalDateTime.now(), partnerTopic, contentType);
+        Message message = new Message(BigInteger.valueOf(13), messageId, topicName, bpId, groupId, messageType, LocalDateTime.now(), partnerTopic, contentType, null, null);
         kafkaEventPublisher.publishMessageSentEvent(message);
 
         Awaitility.await()

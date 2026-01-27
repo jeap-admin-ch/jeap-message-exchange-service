@@ -32,8 +32,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
-import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.HEADER_BP_ID;
-import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.HEADER_MESSAGE_TYPE;
+import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
 import static ch.admin.bit.jeap.messageexchange.web.api.QueryParameterNames.*;
 import static org.springframework.util.StringUtils.hasText;
 
@@ -49,6 +48,7 @@ public class MessagePartnerV4Controller {
     private final MessageExchangeService messageExchangeService;
     private final ControllerStreams controllerStreams;
     private final ServletSemanticAuthorization jeapSemanticAuthorization;
+    private final MetadataConverter metadataConverter;
 
     @PutMapping(value = "/{messageId}")
     @Operation(summary = "Submits a new message",
@@ -62,6 +62,8 @@ public class MessagePartnerV4Controller {
             @RequestHeader(HEADER_BP_ID) @Parameter(description = "Partner identification") String bpId,
             @RequestHeader(HEADER_MESSAGE_TYPE) @Parameter(description = "Business type definition of the message body") String messageType,
             @RequestHeader(HttpHeaders.CONTENT_TYPE) @Parameter(description = "Content-Type of the message body") String contentTypeHeader,
+            @RequestHeader(value = HEADER_PARTNER_TOPIC, required = false) @Parameter(description = "Partner Topic") String partnerTopic,
+            @RequestHeader(value = HEADER_PARTNER_EXTERNAL_REFERENCE, required = false) @Parameter(description = "Partner External Reference") String partnerExternalReference,
             HttpServletRequest request) throws InvalidBpIdException, IOException, UnsupportedMediaTypeException {
 
         String contentType = controllerStreams.validateContentType(contentTypeHeader);
@@ -69,7 +71,7 @@ public class MessagePartnerV4Controller {
         try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_IN, Roles.WRITE);
             log.info("Send new message with messageId {}, bpId {}, messageType {}, size {}, contentType {}", messageId, bpId, messageType, request.getContentLength(), contentType);
-            messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, controllerStreams.getRequestContent(request), contentType);
+            messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, partnerTopic, partnerExternalReference, controllerStreams.getRequestContent(request), contentType);
             log.debug("Message with messageId {} successfully saved", messageId);
             return new ResponseEntity<>(HttpStatus.CREATED);
         }
@@ -85,17 +87,18 @@ public class MessagePartnerV4Controller {
             @RequestParam(value = QUERY_PARAM_GROUP_ID, required = false) @Parameter(description = "Get only messages with given groupId") String groupId,
             @RequestParam(value = QUERY_PARAM_LAST_MESSAGE_ID, required = false) @Parameter(description = "Get only messages which were published after the given messageId") UUID lastMessageId,
             @RequestParam(value = QUERY_PARAM_PARTNER_TOPIC, required = false) @Parameter(description = "Partner Topic") String partnerTopic,
+            @RequestParam(value = QUERY_PARAM_PARTNER_EXTERNAL_REFERENCE, required = false) @Parameter(description = "Partner External Reference") String partnerExternalReference,
             @RequestParam(value = QUERY_PARAM_SIZE, defaultValue = "1000") @Parameter(description = "Number of messages returned") int size)
             throws InvalidBpIdException {
-        return getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, size, MessagesResultJsonDto::createDto);
+        return getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, partnerExternalReference, size, MessagesResultJsonDto::createDto);
     }
 
-    private MessagesResultJsonDto getMessages(String bpId, String topicName, String groupId, UUID lastMessageId, String partnerTopic, int size, Function<List<MessageSearchResultDto>, MessagesResultJsonDto> dtoFactory) throws InvalidBpIdException {
+    private MessagesResultJsonDto getMessages(String bpId, String topicName, String groupId, UUID lastMessageId, String partnerTopic, String partnerExternalReference, int size, Function<List<MessageSearchResultDto>, MessagesResultJsonDto> dtoFactory) throws InvalidBpIdException {
 
         try (var ignored = MessageIdBpIdMdcCloseable.mdcBpId(bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
-            log.debug("Get messages with bpId {}, topicName {}, groupId {}, lastMessageId {}, partnerTopic {}, size {}", bpId, topicName, groupId, lastMessageId, partnerTopic, size);
-            List<MessageSearchResultDto> searchResults = messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, size);
+            log.debug("Get messages with bpId {}, topicName {}, groupId {}, lastMessageId {}, partnerTopic {}, partnerExternalReference {}, size {}", bpId, topicName, groupId, lastMessageId, partnerTopic, partnerExternalReference, size);
+            List<MessageSearchResultDto> searchResults = messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, partnerExternalReference, size);
             return dtoFactory.apply(searchResults);
         }
     }
@@ -114,7 +117,13 @@ public class MessagePartnerV4Controller {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Received get message request for messageId {} and bpId {}", messageId, bpId);
             return messageExchangeService.getMessageFromInternalApplication(bpId, messageId, accept)
-                    .map(ControllerStreams::toResponseEntityWithoutResponseHeaders)
+                    .map(message -> ControllerStreams.toResponseWithHeaders(
+                            message.messageContent(),
+                            message.messageId().toString(),
+                            message.partnerTopic(),
+                            message.partnerExternalReference(),
+                            metadataConverter.convertToBase64(message.metadata())
+                    ))
                     .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
         }
     }
@@ -127,13 +136,20 @@ public class MessagePartnerV4Controller {
             @PathVariable(MESSAGE_ID) @Parameter(description = "Unique message identification as UUID: cc7d5097-4d3f-4fff-af91-fd3680199642") UUID lastMessageId,
             @RequestHeader(HEADER_BP_ID) @Parameter(description = "Partner identification") String bpId,
             @RequestParam(value = QUERY_PARAM_PARTNER_TOPIC, required = false) @Parameter(description = "Partner Topic") String partnerTopic,
-            @RequestParam(value = QUERY_PARAM_TOPIC_NAME, required = false) @Parameter(description = "Get only messages from given topicName") String topicName) throws InvalidBpIdException {
+            @RequestParam(value = QUERY_PARAM_TOPIC_NAME, required = false) @Parameter(description = "Get only messages from given topicName") String topicName,
+            @RequestParam(value = QUERY_PARAM_PARTNER_EXTERNAL_REFERENCE, required = false) @Parameter(description = "Partner External Reference") String partnerExternalReference) throws InvalidBpIdException {
 
         try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(lastMessageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
-            log.debug("Received get next message request with lastMessageId {}, bpId {}, partnerTopic {}, topicName {}", lastMessageId, bpId, partnerTopic, topicName);
-            return messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, partnerTopic, topicName)
-                    .map(nextMessageResultDto -> ControllerStreams.toResponseWithMessageIdHeader(nextMessageResultDto.messageContent(), nextMessageResultDto.messageId().toString()))
+            log.debug("Received get next message request with lastMessageId {}, bpId {}, partnerTopic {}, topicName {}, partnerExternalReference {}", lastMessageId, bpId, partnerTopic, topicName, partnerExternalReference);
+            return messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, partnerTopic, topicName, partnerExternalReference)
+                    .map(nextMessageResultDto -> ControllerStreams.toResponseWithHeaders(
+                            nextMessageResultDto.messageContent(),
+                            nextMessageResultDto.messageId().toString(),
+                            nextMessageResultDto.partnerTopic(),
+                            nextMessageResultDto.partnerExternalReference(),
+                            metadataConverter.convertToBase64(nextMessageResultDto.metadata())
+                    ))
                     .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
         }
     }

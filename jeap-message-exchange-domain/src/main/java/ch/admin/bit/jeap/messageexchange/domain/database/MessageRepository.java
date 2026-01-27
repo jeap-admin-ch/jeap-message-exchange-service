@@ -13,9 +13,11 @@ public interface MessageRepository {
 
     Optional<Message> findByMessageId(UUID messageId);
 
-    List<MessageSearchResultDto> getMessages(String bpId, String topicName, String groupId, UUID lastMessageId, String partnerTopic, int size);
+    Optional<Message> findByBpIdAndMessageId(String bpId, UUID messageId);
 
-    Optional<UUID> getNextMessageId(UUID lastMessageId, String bpId, String partnerTopic, String topicName);
+    List<MessageSearchResultDto> getMessages(String bpId, String topicName, String groupId, UUID lastMessageId, String partnerTopic, String partnerExternalReference, int size);
+
+    Optional<Message> getNextMessage(UUID lastMessageId, String bpId, String partnerTopic, String topicName, String partnerExternalReference);
 
     /**
      * Deletes expired messages older than the given amount of days. Deletes at most the given limit amount of messages.

@@ -56,6 +56,7 @@ Apache License Version 2.0
  * AWS Java SDK for AWS STS - [com.amazonaws:aws-java-sdk-sts](https://aws.amazon.com/sdkforjava)
  * JMES Path Query library - [com.amazonaws:jmespath-java](https://aws.amazon.com/sdkforjava)
  * kaml - [com.charleskorn.kaml:kaml-jvm](https://github.com/charleskorn/kaml)
+ * Internet Time Utility - [com.ethlo.time:itu](https://github.com/ethlo/itu)
  * aalto-xml - [com.fasterxml:aalto-xml](https://github.com/FasterXML/aalto-xml)
  * ClassMate - [com.fasterxml:classmate](https://github.com/FasterXML/java-classmate)
  * Jackson-annotations - [com.fasterxml.jackson.core:jackson-annotations](https://github.com/FasterXML/jackson)
@@ -98,6 +99,7 @@ Apache License Version 2.0
  * J2ObjC Annotations - [com.google.j2objc:j2objc-annotations](https://github.com/google/j2objc/)
  * Jimfs - [com.google.jimfs:jimfs](https://github.com/google/jimfs/jimfs)
  * json-path - [com.jayway.jsonpath:json-path](https://github.com/jayway/JsonPath)
+ * JsonSchemaValidator - [com.networknt:json-schema-validator](https://github.com/networknt/json-schema-validator)
  * Nimbus Content Type - [com.nimbusds:content-type](https://bitbucket.org/connect2id/nimbus-content-type)
  * Nimbus LangTag - [com.nimbusds:lang-tag](https://bitbucket.org/connect2id/nimbus-language-tags)
  * Nimbus JOSE+JWT - [com.nimbusds:nimbus-jose-jwt](https://bitbucket.org/connect2id/nimbus-jose-jwt)
@@ -293,6 +295,7 @@ Apache License Version 2.0
  * scala-collection-compat - [org.scala-lang.modules:scala-collection-compat_2.13](http://www.scala-lang.org/)
  * scala-java8-compat - [org.scala-lang.modules:scala-java8-compat_2.13](http://www.scala-lang.org/)
  * JSONassert - [org.skyscreamer:jsonassert](https://github.com/skyscreamer/JSONassert)
+ * SnakeYAML Engine - [org.snakeyaml:snakeyaml-engine](https://bitbucket.org/snakeyaml/snakeyaml-engine)
  * springdoc-openapi-starter-common - [org.springdoc:springdoc-openapi-starter-common](https://springdoc.org/springdoc-openapi-starter-common/)
  * springdoc-openapi-starter-webmvc-api - [org.springdoc:springdoc-openapi-starter-webmvc-api](https://springdoc.org/springdoc-openapi-starter-webmvc-api/)
  * springdoc-openapi-starter-webmvc-ui - [org.springdoc:springdoc-openapi-starter-webmvc-ui](https://springdoc.org/springdoc-openapi-starter-webmvc-ui/)
@@ -419,6 +422,9 @@ Apache License Version 2.0
  * AWS Glue Schema Registry common - [software.amazon.glue:schema-registry-common](https://aws.amazon.com/glue)
  * AWS Glue Schema Registry Serializer Deserializer - [software.amazon.glue:schema-registry-serde](https://aws.amazon.com/glue)
  * Amazon MSK Library for AWS Identity and Access Management - [software.amazon.msk:aws-msk-iam-auth](https://docs.aws.amazon.com/msk/latest/developerguide/iam-access-control.html)
+ * Jackson-core - [tools.jackson.core:jackson-core](https://github.com/FasterXML/jackson-core)
+ * jackson-databind - [tools.jackson.core:jackson-databind](https://github.com/FasterXML/jackson)
+ * Jackson-dataformat-YAML - [tools.jackson.dataformat:jackson-dataformat-yaml](https://github.com/FasterXML/jackson-dataformats-text)
 
 BSD
 -------------------------------

@@ -4,6 +4,7 @@ import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeE
 import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidBpIdException;
+import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidMetadataException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.MissingRequiredHeaderException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.UnsupportedMediaTypeException;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,12 @@ public class RestResponseExceptionHandler extends ResponseEntityExceptionHandler
     @ExceptionHandler(MismatchedContentTypeException.class)
     public ResponseEntity<String> handleIncorrectContentTypeException(MismatchedContentTypeException ex) {
         return ResponseEntity.status(406)
+                .body(ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidMetadataException.class)
+    public ResponseEntity<String> handleInvalidMetadataException(InvalidMetadataException ex) {
+        return ResponseEntity.status(400)
                 .body(ex.getMessage());
     }
 

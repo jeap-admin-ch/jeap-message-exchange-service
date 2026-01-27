@@ -7,6 +7,7 @@ import lombok.NonNull;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -32,8 +33,21 @@ public class Message {
 
     private String contentType;
 
+    private String partnerExternalReference;
+
+    private Map<String, String> metadata;
+
     @Builder
-    private Message(@NonNull String bpId, String groupId, @NonNull UUID messageId, @NonNull String messageType, LocalDateTime overrideCreatedAt, String partnerTopic, @NonNull String topicName, @NonNull String contentType) {
+    private Message(@NonNull String bpId,
+                    String groupId,
+                    @NonNull UUID messageId,
+                    @NonNull String messageType,
+                    LocalDateTime overrideCreatedAt,
+                    String partnerTopic,
+                    @NonNull String topicName,
+                    @NonNull String contentType,
+                    String partnerExternalReference,
+                    Map<String, String> metadata) {
         this.bpId = bpId;
         this.datePublished = Objects.requireNonNullElseGet(overrideCreatedAt, LocalDateTime::now);
         this.groupId = groupId;
@@ -42,6 +56,8 @@ public class Message {
         this.partnerTopic = partnerTopic;
         this.topicName = topicName;
         this.contentType = contentType;
+        this.partnerExternalReference = partnerExternalReference;
+        this.metadata = metadata;
     }
 
     @Override
@@ -58,6 +74,8 @@ public class Message {
         sb.append(", datePublished=").append(datePublished);
         sb.append(", partnerTopic='").append(partnerTopic).append('\'');
         sb.append(", contentType='").append(contentType).append('\'');
+        sb.append(", partnerExternalReference='").append(partnerExternalReference).append('\'');
+        sb.append(", metadata='").append(metadata).append('\'');
         sb.append('}');
         return sb.toString();
     }

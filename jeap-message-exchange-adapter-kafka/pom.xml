@@ -23,7 +23,7 @@
         <dependency>
             <groupId>ch.admin.bit.jeap.messagetype.jeap</groupId>
             <artifactId>b2-b-message-received-event</artifactId>
-            <version>1.2.0</version>
+            <version>1.3.0</version>
         </dependency>
         <dependency>
             <groupId>ch.admin.bit.jeap.messagetype.jeap</groupId>

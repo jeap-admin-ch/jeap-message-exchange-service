@@ -74,6 +74,13 @@
             <artifactId>jackson-dataformat-xml</artifactId>
         </dependency>
 
+        <!-- JSON -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
         <!-- test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

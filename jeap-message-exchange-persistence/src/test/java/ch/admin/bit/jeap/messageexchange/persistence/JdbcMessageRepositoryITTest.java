@@ -90,6 +90,8 @@ class JdbcMessageRepositoryITTest {
                 .groupId("myGroupId")
                 .topicName("myTopicName")
                 .partnerTopic("myPartnerTopic")
+                .partnerExternalReference("partnerRef")
+                .metadata(Map.of("key", "value", "abc", "test"))
                 .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
         assertThat(message).isNotNull();
@@ -107,6 +109,8 @@ class JdbcMessageRepositoryITTest {
         assertEquals("myMessageType", savedMessage.getMessageType());
         assertEquals("myGroupId", savedMessage.getGroupId());
         assertEquals("myPartnerTopic", savedMessage.getPartnerTopic());
+        assertEquals("partnerRef", savedMessage.getPartnerExternalReference());
+        assertEquals(Map.of("key", "value", "abc", "test"), savedMessage.getMetadata());
         assertNotNull(savedMessage.getDatePublished());
 
         UUID message2Id = UUID.randomUUID();
@@ -188,38 +192,52 @@ class JdbcMessageRepositoryITTest {
     void getMessages() {
         String bpId = UUID.randomUUID().toString();
 
-        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1");
-        Message message2 = storeMessageInDb(bpId, "partnerTopic2", "topicName2", "groupId2");
+        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1", null);
+        Message message2 = storeMessageInDb(bpId, "partnerTopic2", "topicName2", "groupId2", null);
 
-        List<MessageSearchResultDto> messages = messageRepository.getMessages(bpId, null, null, null, null, 10);
+        List<MessageSearchResultDto> messages = messageRepository.getMessages(bpId, null, null, null, null, null, 10);
         assertThat(messages).hasSize(2);
 
-        messages = messageRepository.getMessages(bpId, null, null, message1.getMessageId(), null, 10);
+        messages = messageRepository.getMessages(bpId, null, null, message1.getMessageId(), null, null, 10);
         assertThat(messages).hasSize(1);
 
-        messages = messageRepository.getMessages(bpId, null, null, message2.getMessageId(), null, 10);
+        messages = messageRepository.getMessages(bpId, null, null, message2.getMessageId(), null, null, 10);
         assertThat(messages).isEmpty();
 
-        messages = messageRepository.getMessages(bpId, null, null, null, null, 1);
+        messages = messageRepository.getMessages(bpId, null, null, null, null, null, 1);
         assertThat(messages).hasSize(1);
 
-        messages = messageRepository.getMessages(bpId, message1.getTopicName(), null, null, null, 10);
+        messages = messageRepository.getMessages(bpId, message1.getTopicName(), null, null, null, null, 10);
         assertThat(messages).hasSize(1);
 
-        messages = messageRepository.getMessages(bpId, message2.getTopicName(), null, null, null, 10);
+        messages = messageRepository.getMessages(bpId, message2.getTopicName(), null, null, null, null, 10);
         assertThat(messages).hasSize(1);
 
-        messages = messageRepository.getMessages("other", null, null, null, null, 10);
+        messages = messageRepository.getMessages("other", null, null, null, null, null, 10);
         assertThat(messages).isEmpty();
 
-        messages = messageRepository.getMessages(bpId, message2.getTopicName(), message2.getGroupId(), null, message2.getPartnerTopic(), 10);
+        messages = messageRepository.getMessages(bpId, message2.getTopicName(), message2.getGroupId(), null, message2.getPartnerTopic(), null, 10);
         assertThat(messages).hasSize(1);
 
-        messages = messageRepository.getMessages(bpId, message2.getTopicName(), message2.getGroupId(), message1.getMessageId(), message2.getPartnerTopic(), 10);
+        messages = messageRepository.getMessages(bpId, message2.getTopicName(), message2.getGroupId(), message1.getMessageId(), message2.getPartnerTopic(), null, 10);
         assertThat(messages).hasSize(1);
 
-        messages = messageRepository.getMessages(bpId, message2.getTopicName(), message2.getGroupId(), message2.getMessageId(), message2.getPartnerTopic(), 10);
+        messages = messageRepository.getMessages(bpId, message2.getTopicName(), message2.getGroupId(), message2.getMessageId(), message2.getPartnerTopic(), null, 10);
         assertThat(messages).isEmpty();
+
+        messages = messageRepository.getMessages(bpId, null, null, null, null, "foo", 10);
+        assertThat(messages).isEmpty();
+
+        messages = messageRepository.getMessages(bpId, null, null, null, "foo", null,10);
+        assertThat(messages).isEmpty();
+
+        messages = messageRepository.getMessages(bpId, null, null, null, "foo", "foo",10);
+        assertThat(messages).isEmpty();
+
+        Message message3 = storeMessageInDb(bpId, "partnerTopic3", "topicName3", "groupId3", "ext1");
+
+        messages = messageRepository.getMessages(bpId, message3.getTopicName(), message3.getGroupId(), message2.getMessageId(), message3.getPartnerTopic(), message3.getPartnerExternalReference(), 10);
+        assertThat(messages).hasSize(1);
 
     }
 
@@ -227,64 +245,98 @@ class JdbcMessageRepositoryITTest {
     void getNextMessageId_newMessage_returnsUuid() {
         String bpId = UUID.randomUUID().toString();
 
-        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1");
-        Message message2 = storeMessageInDb(bpId, "partnerTopic2", "topicName2", "groupId2");
+        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1", null);
+        Message message2 = storeMessageInDb(bpId, "partnerTopic2", "topicName2", "groupId2", null);
 
-        Optional<UUID> nextMessageId = messageRepository.getNextMessageId(message1.getMessageId(), bpId, null, null);
-        assertThat(nextMessageId)
-                .isPresent()
-                .contains(message2.getMessageId());
-    }
+        Optional<Message> nextMessageId = messageRepository.getNextMessage(message1.getMessageId(), bpId, null, null, null);
+        assertThat(nextMessageId).isPresent();
 
-    @Test
-    void getNextMessageId_newMessageWithAllArgs_returnsUuid() {
-        String bpId = UUID.randomUUID().toString();
-
-        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1");
-        Message message2 = storeMessageInDb(bpId, "partnerTopic2", "topicName2", "groupId2");
-
-        Optional<UUID> nextMessageId = messageRepository.getNextMessageId(message1.getMessageId(), bpId, "partnerTopic2", "topicName2");
-        assertThat(nextMessageId)
-                .isPresent()
-                .contains(message2.getMessageId());
-
-        nextMessageId = messageRepository.getNextMessageId(message1.getMessageId(), bpId, null, "topicName2");
-        assertThat(nextMessageId)
-                .isPresent()
-                .contains(message2.getMessageId());
-
-        nextMessageId = messageRepository.getNextMessageId(message1.getMessageId(), bpId, "partnerTopic2", null);
-        assertThat(nextMessageId)
-                .isPresent()
-                .contains(message2.getMessageId());
-
-        nextMessageId = messageRepository.getNextMessageId(message1.getMessageId(), bpId, "foo", "topicName2");
-        assertThat(nextMessageId).isEmpty();
-
-        nextMessageId = messageRepository.getNextMessageId(message1.getMessageId(), bpId, "partnerTopic2", "bar");
-        assertThat(nextMessageId).isEmpty();
+        assertThat(nextMessageId.get().getMessageId()).isEqualTo(message2.getMessageId());
+        assertThat(nextMessageId.get().getPartnerTopic()).isEqualTo(message2.getPartnerTopic());
+        assertThat(nextMessageId.get().getTopicName()).isEqualTo(message2.getTopicName());
+        assertThat(nextMessageId.get().getGroupId()).isEqualTo(message2.getGroupId());
 
     }
 
     @Test
-    void getNextMessageId_noNewMessage_returnsEmpty() {
+    void getNextMessage_newMessageWithAllArgs_returnsUuid() {
         String bpId = UUID.randomUUID().toString();
 
-        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1");
+        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1", "ext1");
+        Message message2 = storeMessageInDb(bpId, "partnerTopic2", "topicName2", "groupId2", "ext2");
 
-        Optional<UUID> nextMessageId = messageRepository.getNextMessageId(message1.getMessageId(), bpId, null, null);
+        Optional<Message> nextMessageId = messageRepository.getNextMessage(message1.getMessageId(), bpId, "partnerTopic2", "topicName2", "ext2");
+        assertThat(nextMessageId).isPresent();
+        assertThat(nextMessageId.get().getMessageId()).isEqualTo(message2.getMessageId());
+        assertThat(nextMessageId.get().getPartnerTopic()).isEqualTo(message2.getPartnerTopic());
+        assertThat(nextMessageId.get().getTopicName()).isEqualTo(message2.getTopicName());
+        assertThat(nextMessageId.get().getGroupId()).isEqualTo(message2.getGroupId());
+
+        nextMessageId = messageRepository.getNextMessage(message1.getMessageId(), bpId, null, "topicName2", "ext2");
+        assertThat(nextMessageId).isPresent();
+        assertThat(nextMessageId.get().getMessageId()).isEqualTo(message2.getMessageId());
+        assertThat(nextMessageId.get().getPartnerTopic()).isEqualTo(message2.getPartnerTopic());
+        assertThat(nextMessageId.get().getTopicName()).isEqualTo(message2.getTopicName());
+        assertThat(nextMessageId.get().getGroupId()).isEqualTo(message2.getGroupId());
+
+        nextMessageId = messageRepository.getNextMessage(message1.getMessageId(), bpId, "partnerTopic2", null, "ext2");
+        assertThat(nextMessageId).isPresent();
+        assertThat(nextMessageId.get().getMessageId()).isEqualTo(message2.getMessageId());
+        assertThat(nextMessageId.get().getPartnerTopic()).isEqualTo(message2.getPartnerTopic());
+        assertThat(nextMessageId.get().getTopicName()).isEqualTo(message2.getTopicName());
+        assertThat(nextMessageId.get().getGroupId()).isEqualTo(message2.getGroupId());
+
+        nextMessageId = messageRepository.getNextMessage(message1.getMessageId(), bpId, "foo", "topicName2", "ext2");
+        assertThat(nextMessageId).isEmpty();
+
+        nextMessageId = messageRepository.getNextMessage(message1.getMessageId(), bpId, "partnerTopic2", "bar", "ext2");
+        assertThat(nextMessageId).isEmpty();
+
+        nextMessageId = messageRepository.getNextMessage(message1.getMessageId(), bpId, "partnerTopic2", "topicName2", "foo");
+        assertThat(nextMessageId).isEmpty();
+
+    }
+
+    @Test
+    void getNextMessage_noNewMessage_returnsEmpty() {
+        String bpId = UUID.randomUUID().toString();
+
+        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1", null);
+
+        Optional<Message> nextMessageId = messageRepository.getNextMessage(message1.getMessageId(), bpId, null, null, null);
         assertThat(nextMessageId).isEmpty();
     }
 
     @Test
-    void getNextMessageId_noMessageForBpId_returnsEmpty() {
+    void getNextMessage_noMessageForBpId_returnsEmpty() {
         String bpId = UUID.randomUUID().toString();
 
-        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1");
-        storeMessageInDb(bpId, "partnerTopic2", "topicName2", "groupId2");
+        Message message1 = storeMessageInDb(bpId, "partnerTopic1", "topicName1", "groupId1", null);
+        storeMessageInDb(bpId, "partnerTopic2", "topicName2", "groupId2", null);
 
-        Optional<UUID> nextMessageId = messageRepository.getNextMessageId(message1.getMessageId(), "dummy", null, null);
+        Optional<Message> nextMessageId = messageRepository.getNextMessage(message1.getMessageId(), "dummy", null, null, null);
         assertThat(nextMessageId).isEmpty();
+    }
+
+    @Test
+    void findByBpIdAndMessageId_messageFound_returnsMessage() {
+        Message message = storeMessageInDb(UUID.randomUUID().toString(), "partnerTopic1", "topicName1", "groupId1", "ref1");
+
+        Optional<Message> result = messageRepository.findByBpIdAndMessageId(message.getBpId(), message.getMessageId());
+        assertThat(result).isPresent();
+        assertThat(result.get().getPartnerExternalReference()).isEqualTo(message.getPartnerExternalReference());
+        assertThat(result.get().getPartnerTopic()).isEqualTo(message.getPartnerTopic());
+        assertThat(result.get().getTopicName()).isEqualTo(message.getTopicName());
+        assertThat(result.get().getGroupId()).isEqualTo(message.getGroupId());
+    }
+
+    @Test
+    void findByBpIdAndMessageId_messageWithIdNotFound_returnsEmpty() {
+        UUID messageId = UUID.randomUUID();
+        String bpId = UUID.randomUUID().toString();
+
+        Optional<Message> result = messageRepository.findByBpIdAndMessageId(bpId, messageId);
+        assertThat(result).isEmpty();
     }
 
     @Test
@@ -324,13 +376,13 @@ class JdbcMessageRepositoryITTest {
         assertThat(resultNoMoreExpiredMessagesToDelete)
                 .isFalse();
 
-        List<MessageSearchResultDto> messages = messageRepository.getMessages("123", "topic", null, null, null, 10);
+        List<MessageSearchResultDto> messages = messageRepository.getMessages("123", "topic", null, null, null, null, 10);
         assertThat(messages)
                 .hasSize(1)
                 .first().hasFieldOrPropertyWithValue("messageId", notExpiredMessageId);
     }
 
-    private Message storeMessageInDb(String bpId, String partnerTopic, String topicName, String groupId) {
+    private Message storeMessageInDb(String bpId, String partnerTopic, String topicName, String groupId, String partnerExternalReference) {
         Message message = Message.builder()
                 .messageId(UUID.randomUUID())
                 .bpId(bpId)
@@ -338,6 +390,7 @@ class JdbcMessageRepositoryITTest {
                 .groupId(groupId)
                 .topicName(topicName)
                 .partnerTopic(partnerTopic)
+                .partnerExternalReference(partnerExternalReference)
                 .contentType(MediaType.APPLICATION_XML_VALUE)
                 .build();
         messageRepository.save(message);

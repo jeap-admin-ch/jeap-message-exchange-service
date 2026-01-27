@@ -42,13 +42,14 @@ import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Duration;
+import java.util.Base64;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import static ch.admin.bit.jeap.messageexchange.web.LocalStackTestSupport.createLocalStackContainer;
 import static ch.admin.bit.jeap.messageexchange.web.LocalStackTestSupport.createS3Client;
-import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.HEADER_BP_ID;
-import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.HEADER_MESSAGE_TYPE;
+import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -198,10 +199,58 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
 
         Response response = given()
                 .spec(request)
-                .contentType(ContentType.XML)
+                .accept(MediaType.APPLICATION_XML_VALUE)
                 .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_IN_READ))
                 .when()
-                .get("/api/internal/v2/messages/" + messageId);
+                .get("/api/internal/v3/messages/" + messageId);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
+        assertThat(response.getBody().asString()).isEqualTo(xmlContent);
+        assertMetricsPresent();
+    }
+
+    @Test
+    void putMessageFromPartnerWithAllHeaders_thenWaitForNotification_thenShouldBeAbleToGetMessage() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        String bpId = "myBpID";
+        String messageType = "myMessageType";
+        String xmlContent = getXmlResource("input.xml");
+        String partnerTopic = "myPartnerTopic";
+        String partnerExternalReference = "myPartnerExternalReference";
+
+        given()
+                .spec(request)
+                .contentType(ContentType.XML)
+                .auth().oauth2(createAuthTokenForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))
+                .header(HEADER_BP_ID, bpId)
+                .header(HEADER_MESSAGE_TYPE, messageType)
+                .header(HEADER_PARTNER_TOPIC, partnerTopic)
+                .header(HEADER_PARTNER_EXTERNAL_REFERENCE, partnerExternalReference)
+                .body(xmlContent)
+                .when()
+                .put("/api/partner/v4/messages/" + messageId)
+                .then()
+                .statusCode(HttpStatus.CREATED.value());
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(30))
+                .until(() -> testEventConsumer.hasMessageWithIdempotenceId(messageId));
+
+        B2BMessageReceivedEvent message = testEventConsumer.getMessageByIdempotenceId(messageId);
+        MessageReference messageReference = message.getReferences().getMessageReference();
+        assertThat(messageReference.getBpId()).isEqualTo(bpId);
+        assertThat(messageReference.getMessageId()).isEqualTo(messageId.toString());
+        assertThat(messageReference.getType()).isEqualTo(messageType);
+        assertThat(messageReference.getPartnerTopic()).isEqualTo(partnerTopic);
+        assertThat(messageReference.getPartnerExternalReference()).isEqualTo(partnerExternalReference);
+        assertThat(message.getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());
+
+        Response response = given()
+                .spec(request)
+                .accept(MediaType.APPLICATION_XML_VALUE)
+                .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_IN_READ))
+                .when()
+                .get("/api/internal/v3/messages/" + messageId);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
         assertThat(response.getBody().asString()).isEqualTo(xmlContent);
@@ -240,10 +289,10 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
 
         Response response = given()
                 .spec(request)
-                .contentType(ContentType.XML)
+                .accept(MediaType.APPLICATION_XML_VALUE)
                 .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_IN_READ))
                 .when()
-                .get("/api/internal/v2/messages/" + messageId);
+                .get("/api/internal/v3/messages/" + messageId);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
         assertThat(response.getBody().asString()).isEqualTo(xmlContent);
@@ -260,7 +309,7 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
 
         given()
                 .spec(request)
-                .contentType(ContentType.XML)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .auth().oauth2(createAuthTokenForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))
                 .header(HEADER_BP_ID, bpId)
                 .header(HEADER_MESSAGE_TYPE, messageType)
@@ -290,7 +339,7 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
                 .param("topicName", topicName)
                 .body(xmlContent)
                 .when()
-                .put("/api/internal/v2/messages/" + messageId)
+                .put("/api/internal/v3/messages/" + messageId)
                 .then()
                 .statusCode(HttpStatus.CREATED.value());
 
@@ -324,6 +373,69 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
     }
 
     @Test
+    void putMessageFromInternalWithAllHeaders_thenWaitForMessageInDb_thenShouldBeAbleToGetMessage() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        String bpId = "myBpID";
+        String messageType = "myMessageType";
+        String partnerTopic = "myPartnerTopic";
+        String topicName = "topicName";
+        String xmlContent = getXmlResource("input.xml");
+        String partnerExternalReference = "myPartnerExternalReference";
+
+        Map<String, String> metadata = Map.of("foo", "bar", "myKey", "myValue");
+        String metadataBase64 = Base64.getEncoder().encodeToString("{\"foo\":\"bar\",\"myKey\":\"myValue\"}".getBytes());
+
+        given()
+                .spec(request)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
+                .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_OUT_WRITE))
+                .header(HEADER_BP_ID, bpId)
+                .header(HEADER_MESSAGE_TYPE, messageType)
+                .header(HEADER_PARTNER_TOPIC, partnerTopic)
+                .header(HEADER_PARTNER_EXTERNAL_REFERENCE, partnerExternalReference)
+                .header(HEADER_MES_METADATA, metadataBase64)
+                .param("topicName", topicName)
+                .body(xmlContent)
+                .when()
+                .put("/api/internal/v3/messages/" + messageId)
+                .then()
+                .statusCode(HttpStatus.CREATED.value());
+
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .until(() -> messageRepository.findByMessageId(messageId).isPresent());
+
+        Optional<Message> optionalMessage = messageRepository.findByMessageId(messageId);
+
+        assertThat(optionalMessage).isPresent();
+
+        Message savedMessage = optionalMessage.get();
+
+        assertThat(savedMessage.getSequenceId()).isNotNull();
+        assertThat(savedMessage.getMessageId()).isEqualTo(messageId);
+        assertThat(savedMessage.getBpId()).isEqualTo(bpId);
+        assertThat(savedMessage.getTopicName()).isEqualTo(topicName);
+        assertThat(savedMessage.getMessageType()).isEqualTo(messageType);
+        assertThat(savedMessage.getPartnerExternalReference()).isEqualTo(partnerExternalReference);
+        assertThat(savedMessage.getMetadata()).isEqualTo(metadata);
+
+        Response response = given()
+                .spec(request)
+                .accept(MediaType.APPLICATION_XML_VALUE)
+                .auth().oauth2(createAuthTokenForBpRoles(bpId, B2B_MESSAGE_OUT_READ))
+                .header(HEADER_BP_ID, bpId)
+                .when()
+                .get("/api/partner/v4/messages/" + messageId);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
+        assertThat(response.getBody().asString()).isEqualTo(xmlContent);
+        assertThat(response.getHeader(HEADER_MES_METADATA)).isEqualTo(metadataBase64);
+        assertThat(response.getHeader(HEADER_PARTNER_TOPIC)).isEqualTo(partnerTopic);
+        assertThat(response.getHeader(HEADER_PARTNER_EXTERNAL_REFERENCE)).isEqualTo(partnerExternalReference);
+
+    }
+
+    @Test
     void putMessagesFromInternal_thenWaitForMessagesInDb_thenShouldBeAbleToGetNextMessage() throws Exception {
         UUID message1Id = UUID.randomUUID();
         UUID message2Id = UUID.randomUUID();
@@ -342,7 +454,7 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
                 .param("topicName", topicName)
                 .body(xmlContent1)
                 .when()
-                .put("/api/internal/v2/messages/" + message1Id)
+                .put("/api/internal/v3/messages/" + message1Id)
                 .then()
                 .statusCode(HttpStatus.CREATED.value());
 
@@ -355,7 +467,7 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
                 .param("topicName", topicName)
                 .body(xmlContent2)
                 .when()
-                .put("/api/internal/v2/messages/" + message2Id)
+                .put("/api/internal/v3/messages/" + message2Id)
                 .then()
                 .statusCode(HttpStatus.CREATED.value());
 
@@ -394,7 +506,7 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
                 .param("topicName", topicName)
                 .body(xmlContent)
                 .when()
-                .put("/api/internal/v2/messages/" + messageId)
+                .put("/api/internal/v3/messages/" + messageId)
                 .then()
                 .statusCode(HttpStatus.BAD_REQUEST.value());
 

@@ -112,7 +112,7 @@ public class MessagePartnerV2Controller {
         try (var ignored = MessageIdBpIdMdcCloseable.mdcBpId(bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Get messages with bpId {}, topicName {}, groupId {}, lastMessageId {}, partnerTopic {}, size {}", bpId, topicName, groupId, lastMessageId, partnerTopic, size);
-            List<MessageSearchResultDto> searchResults = messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, size);
+            List<MessageSearchResultDto> searchResults = messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, null, size);
             return dtoFactory.apply(searchResults);
         }
     }
@@ -137,7 +137,7 @@ public class MessagePartnerV2Controller {
         try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Received get message request for messageId {} and bpId {}", messageId, bpId);
-            return messageExchangeService.getMessageFromInternalApplication(bpId, messageId)
+            return messageExchangeService.getMessageContentFromInternalApplication(bpId, messageId)
                     .map(ControllerStreams::toResponseEntityWithoutResponseHeaders)
                     .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
         }
@@ -161,7 +161,7 @@ public class MessagePartnerV2Controller {
         try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(lastMessageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Received get next message request with lastMessageId {}, bpId {}, partnerTopic {}, topicName {}", lastMessageId, bpId, partnerTopic, topicName);
-            return messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, partnerTopic, topicName)
+            return messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, partnerTopic, topicName, null)
                     .map(nextMessageResultDto -> ControllerStreams.toResponseIncludingLegacyMessageIdHeader(nextMessageResultDto.messageContent(), nextMessageResultDto.messageId().toString()))
                     .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
         }
