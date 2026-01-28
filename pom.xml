@@ -35,12 +35,13 @@
 
     <artifactId>jeap-message-exchange-service</artifactId>
     <name>${project.groupId}:${project.artifactId}</name>
-    <version>4.9.0-SNAPSHOT</version>
+    <version>4.10.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
         <maven.javadoc.skip>false</maven.javadoc.skip>
         <sonar.coverage.exclusions>**/Pacticipants.java,**/PactProviderTestBase.java</sonar.coverage.exclusions>
+        <json-schema-validator.version>3.0.0</json-schema-validator.version>
     </properties>
 
     <modules>
@@ -63,52 +64,52 @@
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-malware-adapter-api</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-domain</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-persistence</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-objectstorage</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-kafka</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-metrics</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-web</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-test</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-plugin-api</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-malware-aws-s3</artifactId>
-                <version>4.9.0-SNAPSHOT</version>
+                <version>4.10.0-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

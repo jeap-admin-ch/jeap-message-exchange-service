@@ -96,7 +96,7 @@ public class MessageInternalV3Controller {
         if (StringUtils.hasText(metadata)) {
             return metadataConverter.convertToJson(metadata);
         }
-        return null;
+        return Map.of();
     }
 
     @GetMapping(value = "/{messageId}")
