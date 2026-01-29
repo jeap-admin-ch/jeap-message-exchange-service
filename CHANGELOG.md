@@ -5,10 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.10.0] - 2026-01-28
+## [5.0.0] - 2026-01-29
 
 ### Changed
 
+- BREAKING CHANGE: the Internal API V3 only supports the new standard headers. The old headers have been removed:
+    - bpId (replaced by bp-id)
+    - partnerTopic (replaced by partner-topic)
+    - messageType (replaced by message-type)
 - Added new headers to Internal API V3:
     - partner-external-reference
     - mes-metadata

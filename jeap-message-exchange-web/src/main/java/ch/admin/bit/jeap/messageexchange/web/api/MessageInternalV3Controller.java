@@ -31,9 +31,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
-import static ch.admin.bit.jeap.messageexchange.web.api.DeprecatedHeaderNames.*;
 import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
-import static ch.admin.bit.jeap.messageexchange.web.api.LegacyHeaderHelper.checkVariables;
 
 @RestController
 @RequestMapping("/api/internal/v3/messages")
@@ -54,22 +52,16 @@ public class MessageInternalV3Controller {
     @Timed(value = "jeap_mes_internal_controller_send_message", description = "Time taken to send a message", percentiles = {0.5, 0.8, 0.95, 0.99})
     public ResponseEntity<Void> sendMessage(
             @PathVariable("messageId") @Parameter(description = "Message identification as UUID 12345678-1234-1234-1234-123456789012") UUID messageId,
-            @RequestHeader(value = HEADER_BP_ID, required = false) @Parameter(description = "Receiving partner identification") String bpId,
-            @RequestHeader(value = HEADER_BP_ID_OLD, required = false) @Parameter(description = "Receiving partner identification") String bpIdOld,
+            @RequestHeader(value = HEADER_BP_ID) @Parameter(description = "Receiving partner identification") String bpId,
             @RequestParam("topicName") @Parameter(description = "Publish the message into a certain topic") String topicName,
             @RequestParam(value = "groupId", required = false) @Parameter(description = "Grouping identifier to group multiple messages") String groupId,
-            @RequestHeader(value = HEADER_MESSAGE_TYPE, required = false) @Parameter(description = "Business type definition of the message body") String messageType,
-            @RequestHeader(value = HEADER_MESSAGE_TYPE_OLD, required = false) @Parameter(description = "Business type definition of the message body") String messageTypeOld,
+            @RequestHeader(value = HEADER_MESSAGE_TYPE) @Parameter(description = "Business type definition of the message body") String messageType,
             @RequestHeader(value = HEADER_PARTNER_TOPIC, required = false) @Parameter(description = "Partner Topic") String partnerTopic,
-            @RequestHeader(value = HEADER_PARTNER_TOPIC_OLD, required = false) @Parameter(description = "Partner Topic") String partnerTopicOld,
             @RequestHeader(HttpHeaders.CONTENT_TYPE) @Parameter(description = "Content-Type of the message body") String contentTypeHeader,
             @RequestHeader(value = HEADER_PARTNER_EXTERNAL_REFERENCE, required = false) @Parameter(description = "Partner External Reference") String partnerExternalReference,
             @RequestHeader(value = HEADER_MES_METADATA, required = false) @Parameter(description = "Metadata") String metadata,
             HttpServletRequest request) throws IOException, MissingRequiredHeaderException, UnsupportedMediaTypeException, InvalidMetadataException {
         String contentType = controllerStreams.validateContentType(contentTypeHeader);
-        bpId = checkVariables(bpId, bpIdOld, HEADER_BP_ID_OLD, HEADER_BP_ID, true);
-        messageType = checkVariables(messageType, messageTypeOld, HEADER_MESSAGE_TYPE_OLD, HEADER_MESSAGE_TYPE, true);
-        partnerTopic = checkVariables(partnerTopic, partnerTopicOld, HEADER_PARTNER_TOPIC_OLD, HEADER_PARTNER_TOPIC, false);
 
         try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
             Message message = Message.builder()
