@@ -1,4 +1,4 @@
-publiccodeYmlVersion: 0.4.0
+publiccodeYmlVersion: 0.5.0
 name: jeap-message-exchange-service
 applicationSuite: jEAP
 softwareVersion: 5.0.0
@@ -17,7 +17,7 @@ organisation:
 description:
   en:
     localisedName: jeap-message-exchange-service
-    shortDescription: Service to exchange messages with external business partners asynchronously over a REST API in both directions (inbound and outbound).
+    shortDescription: Service template for exchanging incoming and outgoing messages with external parties, using an HTTP-based messagebox API.
     longDescription: >
       The Message Exchange Service (MES) is a reusable jEAP-based microservice designed
       for secure, asynchronous file-transfer-style communication between internal systems
@@ -28,7 +28,8 @@ description:
       and offers integration with AWS-based malware
       scanning to block infected messages before delivery. It exposes detailed operational
       metrics for HTTP, database, and S3 operations to facilitate monitoring and ensures
-      consistent, standardized deployment aligned with other jEAP microservices.
+      consistent, standardized deployment aligned with other jEAP microservices. 
+      A service instance can be created by depending on this template, then adding specific configuration.
     features:
       - Message exchange API for asynchronous communication with external partners
       - Support for inbound and outbound messages
