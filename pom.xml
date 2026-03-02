@@ -41,7 +41,10 @@
     <properties>
         <maven.javadoc.skip>false</maven.javadoc.skip>
         <sonar.coverage.exclusions>**/Pacticipants.java,**/PactProviderTestBase.java</sonar.coverage.exclusions>
+        <!--  GHSA-72hv-8253-57qq: json-schema-validator version3 uses a vulnerable jackson version -> we pin jackson
+              to 3.1.0. Remove the pinning jackson-3.version after the json-schema-validator got an upgrade  -->
         <json-schema-validator.version>3.0.0</json-schema-validator.version>
+        <jackson-3.version>3.1.0</jackson-3.version>
     </properties>
 
     <modules>
