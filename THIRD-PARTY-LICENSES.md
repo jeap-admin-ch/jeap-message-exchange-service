@@ -132,7 +132,7 @@ Apache License Version 2.0
  * Apache Commons IO - [commons-io:commons-io](https://commons.apache.org/proper/commons-io/)
  * Apache Commons IO - [commons-io:commons-io](https://commons.apache.org/proper/commons-io/)
  * Apache Commons Logging - [commons-logging:commons-logging](http://commons.apache.org/proper/commons-logging/)
- * Apache Commons Validator - [commons-validator:commons-validator](http://commons.apache.org/proper/commons-validator/)
+ * Apache Commons Validator - [commons-validator:commons-validator](https://commons.apache.org/proper/commons-validator/)
  * Spring Cloud AWS Autoconfigure - [io.awspring.cloud:spring-cloud-aws-autoconfigure](https://spring.io/spring-cloud/spring-cloud-aws/spring-cloud-aws-autoconfigure)
  * Spring Cloud AWS Core - [io.awspring.cloud:spring-cloud-aws-core](https://spring.io/spring-cloud/spring-cloud-aws/spring-cloud-aws-core)
  * Spring Cloud AWS SQS - [io.awspring.cloud:spring-cloud-aws-sqs](https://spring.io/spring-cloud/spring-cloud-aws/spring-cloud-aws-sqs)
