@@ -270,6 +270,11 @@ public class MessageExchangeService {
     }
 
     private boolean doDeliverMessageWithStatus(ScanStatus scanStatus) {
-        return scanStatus == null || scanStatus == ScanStatus.NOT_SCANNED || scanStatus == ScanStatus.NO_THREATS_FOUND;
+        if (scanStatus == ScanStatus.THREATS_FOUND) {
+            // explicitly never deliver threats
+            return false;
+        }
+        return scanStatus == null || scanStatus == ScanStatus.NOT_SCANNED || scanStatus == ScanStatus.NO_THREATS_FOUND ||
+                !malwareScanProperties.isEnabled() && (scanStatus == ScanStatus.SCAN_PENDING || scanStatus == ScanStatus.SCAN_FAILED);
     }
 }

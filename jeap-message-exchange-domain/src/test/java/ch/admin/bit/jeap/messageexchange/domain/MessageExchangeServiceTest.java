@@ -2,6 +2,7 @@ package ch.admin.bit.jeap.messageexchange.domain;
 
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.PublishedScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.S3ObjectMalwareScanResultInfo;
@@ -19,6 +20,9 @@ import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -33,6 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +47,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 
+@SuppressWarnings("unused")
 @ExtendWith(MockitoExtension.class)
 class MessageExchangeServiceTest {
 
@@ -464,5 +470,65 @@ class MessageExchangeServiceTest {
         verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
 
         verify(metricsService, never()).publishMetrics(any(MalwareScanResult.class), anyLong(), anyLong());
+    }
+
+    static Stream<Arguments> deliverableWhenMalwareScanDisabled() {
+        return Stream.of(
+                Arguments.of(ScanStatus.NOT_SCANNED, true, "NOT_SCANNED should always be deliverable"),
+                Arguments.of(ScanStatus.NO_THREATS_FOUND, true, "NO_THREATS_FOUND should always be deliverable"),
+                Arguments.of(ScanStatus.SCAN_PENDING, true, "SCAN_PENDING should be deliverable when scanning is disabled"),
+                Arguments.of(ScanStatus.SCAN_FAILED, true, "SCAN_FAILED should be deliverable when scanning is disabled"),
+                Arguments.of(ScanStatus.THREATS_FOUND, false, "THREATS_FOUND should never be deliverable")
+        );
+    }
+
+    @ParameterizedTest(name = "malware scan disabled, {0}: shouldDeliver={1}")
+    @MethodSource("deliverableWhenMalwareScanDisabled")
+    void getMessageFromPartner_malwareScanDisabled(ScanStatus scanStatus, boolean shouldDeliver, String description) {
+        UUID messageId = UUID.randomUUID();
+        prepareStoredMessageWithScanStatus(scanStatus);
+        // Note: mockito mock malwareScanProperties returns false by default for isEnabled()
+
+        if (shouldDeliver) {
+            Optional<MessageContent> result = messageExchangeService.getMessageFromPartner(messageId);
+            assertThat(result).as(description).isPresent();
+        } else {
+            assertThrows(MalwareScanFailedOrBlockedException.class,
+                    () -> messageExchangeService.getMessageFromPartner(messageId), description);
+        }
+    }
+
+    static Stream<Arguments> deliverableWhenMalwareScanEnabled() {
+        return Stream.of(
+                Arguments.of(ScanStatus.NOT_SCANNED, true, false, "NOT_SCANNED should always be deliverable"),
+                Arguments.of(ScanStatus.NO_THREATS_FOUND, true, false, "NO_THREATS_FOUND should always be deliverable"),
+                Arguments.of(ScanStatus.SCAN_PENDING, false, true, "SCAN_PENDING should not be deliverable when scanning is enabled"),
+                Arguments.of(ScanStatus.SCAN_FAILED, false, true, "SCAN_FAILED should not be deliverable when scanning is enabled"),
+                Arguments.of(ScanStatus.THREATS_FOUND, false, false, "THREATS_FOUND should never be deliverable")
+        );
+    }
+
+    @ParameterizedTest(name = "malware scan enabled, {0}: shouldDeliver={1}")
+    @MethodSource("deliverableWhenMalwareScanEnabled")
+    void getMessageFromPartner_malwareScanEnabled(ScanStatus scanStatus, boolean shouldDeliver, boolean malwareScanPropsStubbingRequired, String description) {
+        UUID messageId = UUID.randomUUID();
+        prepareStoredMessageWithScanStatus(scanStatus);
+        if (malwareScanPropsStubbingRequired) {
+            when(malwareScanProperties.isEnabled()).thenReturn(true);
+        }
+
+        if (shouldDeliver) {
+            Optional<MessageContent> result = messageExchangeService.getMessageFromPartner(messageId);
+            assertThat(result).as(description).isPresent();
+        } else {
+            assertThrows(MalwareScanFailedOrBlockedException.class,
+                    () -> messageExchangeService.getMessageFromPartner(messageId), description);
+        }
+    }
+
+    private void prepareStoredMessageWithScanStatus(ScanStatus scanStatus) {
+        this.storedMessage = "<content>test</content>";
+        S3ObjectTagsService tagsService = new S3ObjectTagsService();
+        this.storedTags = new HashMap<>(tagsService.toMap("some-bp-id", "some-message-type", null, null, scanStatus, System.currentTimeMillis()));
     }
 }
