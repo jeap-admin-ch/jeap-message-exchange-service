@@ -3,6 +3,7 @@ package ch.admin.bit.jeap.messageexchange.objectstorage;
 import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.BucketType;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
+import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsUpdateResult;
 import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,7 +47,7 @@ public class ObjectStoreAdapter implements ObjectStore {
 
     @Override
     @Timed(value = "jeap_mes_objectstore_update_tags", description = "Time taken to update the tags of a message in s3", percentiles = {0.5, 0.8, 0.95, 0.99})
-    public Map<String, String> updateTagsAndGetTags(BucketType bucketType, String bucketName, String objectKey, Map<String, String> tagsToUpdate) {
+    public S3ObjectTagsUpdateResult updateTagsAndGetTags(BucketType bucketType, String bucketName, String objectKey, Map<String, String> tagsToUpdate) {
         String expectedBucketName = getBucketName(bucketType);
         if (!expectedBucketName.equals(bucketName)) {
             throw new IllegalStateException("Bucket name mismatch. Expected: " + expectedBucketName + ", actual: " + bucketName);

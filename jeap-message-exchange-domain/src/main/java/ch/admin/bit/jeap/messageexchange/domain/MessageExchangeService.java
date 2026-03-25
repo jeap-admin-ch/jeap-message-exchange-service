@@ -14,6 +14,7 @@ import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.*;
 import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import ch.admin.bit.jeap.messageexchange.domain.xml.XmlValidatingOutputStream;
+import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanResult;
 import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanTrigger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -226,7 +227,26 @@ public class MessageExchangeService {
 
         metricsService.publishMetrics(scanResultInfo.scanResult(), messageArrivalTimeInMillis, s3ObjectMetadata.tags().saveTimeInMillis());
 
-        publishMessageReceivedEvent(scanResultInfo.objectKey(), s3ObjectMetadata);
+        if (shouldNotifyMessageReceivedEvent(scanResultInfo, s3ObjectMetadata)) {
+            publishMessageReceivedEvent(scanResultInfo.objectKey(), s3ObjectMetadata);
+        } else {
+            log.debug("Not publishing MessageReceivedEvent again for message with id '{}' from business partner with id '{}' " +
+                    "and with external reference '{}' and with scan result '{}'.", scanResultInfo.objectKey(),
+                    s3ObjectMetadata.tags().bpId(), s3ObjectMetadata.tags().partnerExternalReference(), scanResultInfo.scanResult());
+        }
+    }
+
+    private boolean shouldNotifyMessageReceivedEvent(S3ObjectMalwareScanResultInfo  scanResultInfo, S3ObjectMetadata s3ObjectMetadata) {
+        return threatsHaveBeenDetected(scanResultInfo.scanResult()) ||  // we always want to notify about threats
+                !malwareScanWasDisabledWhenReceivingNotifiedMessage(s3ObjectMetadata); // already notified when message was received
+    }
+
+    private boolean threatsHaveBeenDetected(MalwareScanResult scanResult) {
+        return scanResult == MalwareScanResult.THREATS_FOUND;
+    }
+
+    private boolean malwareScanWasDisabledWhenReceivingNotifiedMessage(S3ObjectMetadata metadata) {
+        return (metadata.previousTags() != null) && (metadata.previousTags().scanStatus() == ScanStatus.NOT_SCANNED);
     }
 
     private void publishMessageReceivedEvent(String objectKey, S3ObjectMetadata s3ObjectMetadata) {
@@ -254,9 +274,10 @@ public class MessageExchangeService {
 
     private S3ObjectMetadata updateAndGetValidatedTags(String bucketName, String objectKey, ScanStatus scanStatus) {
         Map<String, String> tagsToUpdate = tagsService.toMap(scanStatus);
-        Map<String, String> actualTags = objectStore.updateTagsAndGetTags(BucketType.PARTNER, bucketName, objectKey, tagsToUpdate);
+        S3ObjectTagsUpdateResult updateResult = objectStore.updateTagsAndGetTags(BucketType.PARTNER, bucketName, objectKey, tagsToUpdate);
         return new S3ObjectMetadata(
-                tagsService.getTagsfromMapAndValidate(bucketName, objectKey, actualTags),
+                tagsService.getTagsfromMapAndValidate(bucketName, objectKey, updateResult.currentTags()),
+                tagsService.getTagsfromMapAndValidate(bucketName, objectKey, updateResult.previousTags()),
                 objectStore.getContentType(BucketType.PARTNER, bucketName, objectKey));
     }
 

@@ -194,7 +194,7 @@ class MessageExchangeInteractionOldHeaderTest extends KafkaIntegrationTestBase {
         assertThat(messageReference.getBpId()).isEqualTo(bpId);
         assertThat(messageReference.getMessageId()).isEqualTo(messageId.toString());
         assertThat(messageReference.getType()).isEqualTo(messageType);
-        assertThat(message.getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());
+        assertThat(message.getIdentity().getIdempotenceId()).isEqualTo(messageId + "_NOT_SCANNED");
 
         Response response = given()
                 .spec(request)

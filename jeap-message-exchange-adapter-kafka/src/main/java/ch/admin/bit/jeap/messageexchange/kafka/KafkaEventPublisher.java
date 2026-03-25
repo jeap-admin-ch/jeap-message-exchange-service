@@ -72,7 +72,7 @@ public class KafkaEventPublisher implements EventPublisher {
                 .contentType(contentType)
                 .systemName(kafkaProperties.getSystemName())
                 .serviceName(kafkaProperties.getServiceName())
-                .idempotenceId(messageId.toString())
+                .idempotenceId(messageId + "_" + scanStatus.name())
                 .build();
 
         return new MessageResult(topicConfiguration.getMessageReceived(), messageReceivedEvent);

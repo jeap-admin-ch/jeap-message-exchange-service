@@ -23,12 +23,12 @@ class TestEventConsumer {
 
     public boolean hasMessageWithIdempotenceId(UUID messageId) {
         return getMessages().stream()
-                .anyMatch(m -> m.getIdentity().getIdempotenceId().equals(messageId.toString()));
+                .anyMatch(m -> m.getIdentity().getIdempotenceId().startsWith(messageId.toString()));
     }
 
     public B2BMessageReceivedEvent getMessageByIdempotenceId(UUID messageId) {
         return getMessages().stream()
-                .filter(m -> m.getIdentity().getIdempotenceId().equals(messageId.toString()))
+                .filter(m -> m.getIdentity().getIdempotenceId().startsWith(messageId.toString()))
                 .findFirst()
                 .orElseThrow();
     }

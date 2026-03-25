@@ -79,7 +79,7 @@ class KafkaEventPublisherITTest extends KafkaIntegrationTestBase {
         assertThat(messages.getFirst().getType().getVariant()).isEqualTo(messageType);
         assertThat(messages.getFirst().getPublisher().getSystem()).isEqualTo("my-system-name");
         assertThat(messages.getFirst().getPublisher().getService()).isEqualTo("my-service-name");
-        assertThat(messages.getFirst().getIdentity().getIdempotenceId()).isEqualTo(messageId.toString());
+        assertThat(messages.getFirst().getIdentity().getIdempotenceId()).isEqualTo(messageId + "_" + externalPublishedScanStatus.name());
         assertThat(messages.getFirst().getPayload().getScanStatus()).isEqualTo(S3ObjectMalwareScanStatus.NO_THREATS_FOUND);
         assertThat(messages.getFirst().getReferences().getMessageReference().getContentType()).isEqualTo(contentType);
         assertThat(messages.getFirst().getReferences().getMessageReference().getPartnerTopic()).isEqualTo(partnerTopic);

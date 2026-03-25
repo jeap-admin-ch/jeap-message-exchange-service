@@ -14,7 +14,7 @@ public interface ObjectStore {
 
     Optional<MessageContent> loadMessageWithTags(BucketType bucketType, String string);
 
-    Map<String,String> updateTagsAndGetTags(BucketType bucketType, String bucketName, String objectKey, Map<String, String> tagsToUpdate);
+    S3ObjectTagsUpdateResult updateTagsAndGetTags(BucketType bucketType, String bucketName, String objectKey, Map<String, String> tagsToUpdate);
 
     String getBucketName(BucketType bucketType);
 

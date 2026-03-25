@@ -11,6 +11,7 @@ import ch.admin.bit.jeap.messageexchange.domain.messaging.EventPublisher;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.BucketType;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
+import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsUpdateResult;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsService;
 import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
@@ -86,9 +87,10 @@ class MessageExchangeServiceTest {
         }
 
         @Override
-        public Map<String, String> updateTagsAndGetTags(BucketType bucketType, String bucketName, String objectKey, Map<String, String> tagsToUpdate) {
+        public S3ObjectTagsUpdateResult updateTagsAndGetTags(BucketType bucketType, String bucketName, String objectKey, Map<String, String> tagsToUpdate) {
+            Map<String, String> previousTags = new HashMap<>(storedTags);
             storedTags.putAll(tagsToUpdate);
-            return storedTags;
+            return new S3ObjectTagsUpdateResult(storedTags, previousTags);
         }
 
         @Override
@@ -455,6 +457,56 @@ class MessageExchangeServiceTest {
                 .containsEntry("scanStatus", ScanStatus.SCAN_FAILED.name());
 
         verify(metricsService, never()).publishMetrics(any(MalwareScanResult.class), anyLong(), anyLong());
+    }
+
+    @Test
+    void onMalwareScanResult_ScanPendingAndScanDisabled_shouldPublishEvent() {
+        // Scenario: Message was received with scanning ON (SCAN_PENDING), scan result arrives after scanning turned OFF.
+        // The message received event must be published.
+        UUID messageId = storeTestMessageInStatus(ScanStatus.SCAN_PENDING);
+
+        S3ObjectMalwareScanResultInfo scanResult = new S3ObjectMalwareScanResultInfo(MalwareScanResult.NO_THREATS_FOUND, "bucketName", messageId.toString());
+        // the malwareScanProperties mock returns false by default for isEnabled() -> scanning is turned off
+        messageExchangeService.onMalwareScanResult(scanResult);
+
+        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, "bpId", "messageType", null, null, PublishedScanStatus.NO_THREATS_FOUND, MediaType.APPLICATION_XML_VALUE);
+    }
+
+    @Test
+    void onMalwareScanResult_NotScanned_shouldNotPublishEventAgain() {
+        // Scenario: Message was received with scanning OFF (NOT_SCANNED) but still got scanned for malware without any threats found.
+        // The message received event was already published when the message was received, so it should NOT be published again.
+        UUID messageId = storeTestMessageInStatus(ScanStatus.NOT_SCANNED);
+
+        S3ObjectMalwareScanResultInfo scanResult = new S3ObjectMalwareScanResultInfo(MalwareScanResult.NO_THREATS_FOUND, "bucketName", messageId.toString());
+        messageExchangeService.onMalwareScanResult(scanResult);
+
+        verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
+    }
+
+    @Test
+    void onMalwareScanResult_NotScannedButThreatsFound_shouldPublishEvent() {
+        // Scenario: Message was received with scanning OFF (NOT_SCANNED), but still got scanned for malware with threats found.
+        // Threats should always be notified, even if the message received event was already published before as NOT_SCANNED.
+        UUID messageId = storeTestMessageInStatus(ScanStatus.NOT_SCANNED);
+
+        S3ObjectMalwareScanResultInfo internalScanResult = new S3ObjectMalwareScanResultInfo(MalwareScanResult.THREATS_FOUND, "bucketName", messageId.toString());
+        messageExchangeService.onMalwareScanResult(internalScanResult);
+
+        verify(eventPublisher, times(1)).publishMessageReceivedEvent(messageId, "bpId", "messageType", null, null, PublishedScanStatus.THREATS_FOUND, MediaType.APPLICATION_XML_VALUE);
+    }
+
+    private UUID storeTestMessageInStatus(ScanStatus scanStatus) {
+        UUID messageId = UUID.randomUUID();
+        String saveTimeInMillis = String.valueOf(System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(2));
+        this.storedMessage = "<content>test</content>";
+        this.storedTags = new HashMap<>(Map.of(
+                "bpId", "bpId",
+                "messageType", "messageType",
+                "scanStatus", scanStatus.name(),
+                "saveTimeInMillis", saveTimeInMillis
+        ));
+        return messageId;
     }
 
     @Test

@@ -2,10 +2,10 @@ package ch.admin.bit.jeap.messageexchange.objectstorage;
 
 import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.domain.housekeeping.HousekeepingProperties;
+import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsUpdateResult;
 import ch.admin.bit.jeap.messageexchange.objectstorage.lifecycle.S3LifecycleConfigurationInitializer;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import software.amazon.awssdk.core.internal.util.Mimetype;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
@@ -65,7 +65,7 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
         log.info("Object {}:{} with size {} uploaded to bucket {}.", objectKey, versionId == null ? "" : versionId, contentLength, bucketName);
     }
 
-    public Map<String, String> updateTagsAndGetTags(String bucketName, String objectKey, Map<String, String> tagsToUpdate) {
+    public S3ObjectTagsUpdateResult updateTagsAndGetTags(String bucketName, String objectKey, Map<String, String> tagsToUpdate) {
         // an update of the tags replaces all existing tags, so we have to get the existing tags first
         Map<String, String> existingTags = getTagsOnObject(bucketName, objectKey);
         Map<String, String> allTags = new HashMap<>(existingTags);
@@ -73,7 +73,7 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
 
         updateTags(bucketName, objectKey, allTags);
 
-        return allTags;
+        return new S3ObjectTagsUpdateResult(allTags, existingTags);
     }
 
     private void updateTags(String bucketName, String objectKey, Map<String, String> tags) {
