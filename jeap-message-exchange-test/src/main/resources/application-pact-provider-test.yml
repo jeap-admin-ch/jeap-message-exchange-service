@@ -29,6 +29,8 @@ jeap:
         secret-key: localsecret
     malwarescan:
       enabled: false
+      aws-s3:
+        enabled: false
 
   messaging:
     kafka:
