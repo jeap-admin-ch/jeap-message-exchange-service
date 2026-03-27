@@ -85,6 +85,8 @@ public class PactProviderTestBase {
         InputStream xmlStream = new ByteArrayInputStream(xml);
         MessageContent messageContent = new MessageContent(xmlStream, xml.length);
         Optional<MessageContent> content = Optional.of(messageContent);
+        when(s3ObjectStorageRepository.getContentType("bazg-jme-messageexchange-partner-obs-dev", "610b64cc-4211-4625-a11e-8e8bfe616876"))
+                .thenReturn(Optional.of("application/xml"));
         when(s3ObjectStorageRepository.getObjectWithTags("bazg-jme-messageexchange-partner-obs-dev", "610b64cc-4211-4625-a11e-8e8bfe616876"))
                 .thenReturn(content);
     }
