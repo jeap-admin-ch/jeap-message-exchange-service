@@ -45,6 +45,8 @@
               to 3.1.0. Remove the pinning jackson-3.version after the json-schema-validator got an upgrade  -->
         <json-schema-validator.version>3.0.0</json-schema-validator.version>
         <jackson-3.version>3.1.0</jackson-3.version>
+        <!-- CVE-2026-33870: pin netty-codec-http to 4.1.132.Final -->
+        <netty.version>4.1.132.Final</netty.version>
     </properties>
 
     <modules>
@@ -64,6 +66,17 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- CVE-2026-33870: override netty-codec-http version from parent BOM -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec-http</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec-http2</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-malware-adapter-api</artifactId>
