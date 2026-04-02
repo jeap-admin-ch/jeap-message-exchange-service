@@ -97,7 +97,7 @@ class MessageExchangeInteractionPartnerApiV3Test extends KafkaIntegrationTestBas
     @Autowired
     private MessageRepository messageRepository;
 
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine");
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
 
     @BeforeAll
     static void startContainers() {
