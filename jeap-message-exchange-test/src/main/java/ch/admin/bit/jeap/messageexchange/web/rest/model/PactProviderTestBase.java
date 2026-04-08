@@ -11,6 +11,7 @@ import au.com.dius.pact.provider.junitsupport.loader.PactBroker;
 import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.kafka.MessageExchangeServiceContractsValidator;
 import ch.admin.bit.jeap.messageexchange.objectstorage.S3ObjectStorageRepository;
+import ch.admin.bit.jeap.messageexchange.persistence.JdbcInboundMessageRepository;
 import ch.admin.bit.jeap.messageexchange.persistence.JdbcMessageRepository;
 import ch.admin.bit.jeap.messageexchange.web.MessageExchangeApplication;
 import lombok.SneakyThrows;
@@ -51,6 +52,9 @@ public class PactProviderTestBase {
 
     @MockitoBean
     JdbcMessageRepository jdbcMessageRepository;
+
+    @MockitoBean
+    JdbcInboundMessageRepository jdbcInboundMessageRepository;
 
     @MockitoBean
     S3ObjectStorageRepository s3ObjectStorageRepository;

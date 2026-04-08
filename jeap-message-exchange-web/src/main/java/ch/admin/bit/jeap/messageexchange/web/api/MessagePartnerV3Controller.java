@@ -2,6 +2,7 @@ package ch.admin.bit.jeap.messageexchange.web.api;
 
 import ch.admin.bit.jeap.messageexchange.domain.MessageExchangeService;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.web.api.dto.MessagesResultDto;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidBpIdException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.MissingRequiredHeaderException;
@@ -63,9 +64,9 @@ public class MessagePartnerV3Controller {
             @PathVariable(MESSAGE_ID) @Parameter(description = "Unique message identification as UUID: cc7d5097-4d3f-4fff-af91-fd3680199642") UUID messageId,
             @RequestHeader(HEADER_BP_ID) @Parameter(description = "Partner identification") String bpId,
             @RequestHeader(HEADER_MESSAGE_TYPE) @Parameter(description = "Business type definition of the message body") String messageType,
-            HttpServletRequest request) throws InvalidBpIdException, IOException, MissingRequiredHeaderException {
+            HttpServletRequest request) throws InvalidBpIdException, IOException, MismatchedContentException {
 
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_IN, Roles.WRITE);
             log.info("Send new message with messageId {}, bpId {}, messageType {}, size {}", messageId, bpId, messageType, request.getContentLength());
             messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, controllerStreams.getRequestContent(request));
@@ -91,7 +92,7 @@ public class MessagePartnerV3Controller {
 
     private MessagesResultDto getMessages(String bpId, String topicName, String groupId, UUID lastMessageId, String partnerTopic, int size, Function<List<MessageSearchResultDto>, MessagesResultDto> dtoFactory) throws InvalidBpIdException {
 
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcBpId(bpId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcBpId(bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Get messages with bpId {}, topicName {}, groupId {}, lastMessageId {}, partnerTopic {}, size {}", bpId, topicName, groupId, lastMessageId, partnerTopic, size);
             List<MessageSearchResultDto> searchResults = messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, null, size);
@@ -108,7 +109,7 @@ public class MessagePartnerV3Controller {
             @RequestHeader(HEADER_BP_ID) @Parameter(description = "Partner identification") String bpId
     ) throws InvalidBpIdException {
 
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Received get message request for messageId {} and bpId {}", messageId, bpId);
             return messageExchangeService.getMessageContentFromInternalApplication(bpId, messageId)
@@ -127,7 +128,7 @@ public class MessagePartnerV3Controller {
             @RequestParam(value = QUERY_PARAM_PARTNER_TOPIC, required = false) @Parameter(description = "Partner Topic") String partnerTopic,
             @RequestParam(value = QUERY_PARAM_TOPIC_NAME, required = false) @Parameter(description = "Get only messages from given topicName") String topicName) throws InvalidBpIdException, MissingRequiredHeaderException {
 
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(lastMessageId, bpId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(lastMessageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Received get next message request with lastMessageId {}, bpId {}, partnerTopic {}, topicName {}", lastMessageId, bpId, partnerTopic, topicName);
             return messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, partnerTopic, topicName, null)

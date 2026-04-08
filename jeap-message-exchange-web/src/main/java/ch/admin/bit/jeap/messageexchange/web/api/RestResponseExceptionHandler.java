@@ -1,5 +1,6 @@
 package ch.admin.bit.jeap.messageexchange.web.api;
 
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
@@ -53,6 +54,12 @@ public class RestResponseExceptionHandler extends ResponseEntityExceptionHandler
     @ExceptionHandler(InvalidMetadataException.class)
     public ResponseEntity<String> handleInvalidMetadataException(InvalidMetadataException ex) {
         return ResponseEntity.status(400)
+                .body(ex.getMessage());
+    }
+
+    @ExceptionHandler(MismatchedContentException.class)
+    public ResponseEntity<String> handleMismatchedContentException(MismatchedContentException ex) {
+        return ResponseEntity.status(409)
                 .body(ex.getMessage());
     }
 

@@ -1,6 +1,7 @@
 package ch.admin.bit.jeap.messageexchange.kafka;
 
 import ch.admin.bit.jeap.messageexchange.domain.Message;
+import ch.admin.bit.jeap.messageexchange.domain.database.InboundMessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
@@ -50,6 +51,10 @@ class KafkaMessageSentEventPublisherITTest extends KafkaIntegrationTestBase {
     @MockitoBean
     @SuppressWarnings("unused")
     private MessageRepository messageRepository;
+
+    @MockitoBean
+    @SuppressWarnings("unused")
+    private InboundMessageRepository inboundMessageRepository;
 
     @MockitoBean
     @SuppressWarnings("unused")

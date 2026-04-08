@@ -1,9 +1,11 @@
 package ch.admin.bit.jeap.messageexchange.domain;
 
+import ch.admin.bit.jeap.messageexchange.domain.database.InboundMessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
-import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
+import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.PublishedScanStatus;
@@ -23,6 +25,9 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,6 +41,7 @@ public class MessageExchangeService {
     private final ObjectStore objectStore;
     private final EventPublisher eventPublisher;
     private final MessageRepository messageRepository;
+    private final InboundMessageRepository inboundMessageRepository;
     private final MalwareScanProperties malwareScanProperties;
     private final MessageSentProperties messageSentProperties;
     private final MetricsService metricsService;
@@ -102,18 +108,17 @@ public class MessageExchangeService {
             if (messageFromInternalApplication.isPresent()) {
                 log.trace("Found new message with messageId {} for bpId {} after lastMessageId {}", message.getMessageId(), bpId, lastMessageId);
 
-                        return messageFromInternalApplication.map(content -> new MessageSearchResultWithContentDto(
-               message.getMessageId(),
-               content,
-               message.getPartnerTopic(),
-               message.getPartnerExternalReference(),
-               message.getMetadata()));
+                return messageFromInternalApplication.map(content -> new MessageSearchResultWithContentDto(
+                        message.getMessageId(),
+                        content,
+                        message.getPartnerTopic(),
+                        message.getPartnerExternalReference(),
+                        message.getMetadata()));
             }
         }
         log.trace("No new message found for bpId {} after lastMessageId {}", bpId, lastMessageId);
         return Optional.empty();
     }
-
 
 
     public Optional<MessageContent> getMessageFromPartner(UUID messageId) {
@@ -151,43 +156,106 @@ public class MessageExchangeService {
     }
 
     /**
-     * Legacy save with xml validation for partner messages.
+     * Legacy save with XML validation for partner messages.
      * This method is kept for backward compatibility.
      */
-    public void saveNewMessageFromPartner(UUID messageId, String bpId, String messageType, MessageContent rawMessageContent) throws IOException {
+    public void saveNewMessageFromPartner(UUID messageId, String bpId, String messageType, MessageContent rawMessageContent) throws IOException, MismatchedContentException {
         try (InputStream inputStream = XmlValidatingOutputStream.wrapInputStreamWithXmlValidation(messageId, bpId, rawMessageContent)) {
             saveNewMessageFromPartner(inputStream, messageId, bpId, messageType, null, null, rawMessageContent, MediaType.APPLICATION_XML_VALUE);
         }
     }
 
-    public void saveNewMessageFromPartner(UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType) throws IOException {
+    public void saveNewMessageFromPartner(UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType) throws IOException, MismatchedContentException {
         saveNewMessageFromPartner(rawMessageContent.inputStream(), messageId, bpId, messageType, partnerTopic, partnerExternalReference, rawMessageContent, contentType);
     }
 
-    private void saveNewMessageFromPartner(InputStream inputStream, UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType) throws IOException {
+    @SuppressWarnings("java:S107")
+    private void saveNewMessageFromPartner(InputStream inputStream, UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType) throws IOException, MismatchedContentException {
+        Optional<InboundMessage> inboundMessageOptional = inboundMessageRepository.findByBpIdAndMessageId(bpId, messageId);
+        if (inboundMessageOptional.isEmpty()) {
+            storeInputStreamInS3AndSendEvents(inputStream, messageId, bpId, messageType, partnerTopic, partnerExternalReference, rawMessageContent, contentType);
+            inboundMessageRepository.save(InboundMessage.builder().messageId(messageId).bpId(bpId).contentLength(rawMessageContent.contentLength()).build());
+        } else {
+            handleDuplicatePartnerMessage(inputStream, inboundMessageOptional.get(), messageId, bpId, rawMessageContent, messageType, partnerTopic, partnerExternalReference, contentType);
+        }
+    }
+
+    @SuppressWarnings("java:S107")
+    private void storeInputStreamInS3AndSendEvents(InputStream inputStream, UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType) throws IOException {
         ScanStatus scanStatus = malwareScanProperties.isEnabled() ? ScanStatus.SCAN_PENDING : ScanStatus.NOT_SCANNED;
         Map<String, String> tags = tagsService.toMap(bpId, messageType, partnerTopic, partnerExternalReference, scanStatus, System.currentTimeMillis());
 
         MessageContent messageContent = new MessageContent(inputStream, rawMessageContent.contentLength(), tags);
 
         // Save to S3
-        // This will validate the XML at the same time by copying output to the XmlValidatingOutputStream
         objectStore.storeMessage(BucketType.PARTNER, messageId.toString(), messageContent, contentType);
 
         if (!malwareScanProperties.isEnabled()) {
             // Publish ReceivedEvent and events from configured listeners
             eventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, partnerTopic, partnerExternalReference, PublishedScanStatus.NOT_SCANNED, contentType);
-        } else
-            malwareScanTriggerOptional.ifPresent(
-                    malwareScanTrigger -> malwareScanTrigger.triggerScan(
-                            messageId.toString(),
-                            objectStore.getBucketName(BucketType.PARTNER),
-                            messageContent.inputStream(),
-                            messageContent.contentLength()));
+        } else {
+            malwareScanTriggerOptional.ifPresent(malwareScanTrigger -> malwareScanTrigger.triggerScan(messageId.toString(), objectStore.getBucketName(BucketType.PARTNER)));
+        }
+    }
+
+    @SuppressWarnings("java:S107")
+    private void handleDuplicatePartnerMessage(InputStream inputStream, InboundMessage inboundMessage, UUID messageId, String bpId, MessageContent rawMessageContent,
+                                               String messageType, String partnerTopic, String partnerExternalReference, String contentType) throws MismatchedContentException, IOException {
+
+        metricsService.duplicatedMessageIdReceived(bpId);
+
+        if (rawMessageContent.contentLength() != inboundMessage.getContentLength()) {
+            log.warn("Duplicated messageIds found: message {} for bpId {} has different content length", messageId, bpId);
+            throw MismatchedContentException.contentLengthDoesNotMatch(messageId);
+        }
+
+        Optional<MessageContent> existingMessageOptional = objectStore.loadMessage(BucketType.PARTNER, messageId.toString());
+        if (existingMessageOptional.isPresent()) {
+            String checksumExistingMessage = computeChecksum(existingMessageOptional.get().inputStream());
+            String checksumIncomingMessage = computeChecksum(inputStream);
+            log.debug("Duplicated messageIds found: checksum existing: '{}' / checksum incoming: '{}'", checksumExistingMessage, checksumIncomingMessage);
+
+            if (!checksumIncomingMessage.equals(checksumExistingMessage)) {
+                log.warn("Duplicated messageIds found: message {} for bpId {} has different checksum", messageId, bpId);
+                throw MismatchedContentException.checksumDoesNotMatch(messageId);
+            }
+
+            log.info("Duplicated messageIds found: ignoring message {} for bpId {} with identical content", messageId, bpId);
+
+        } else {
+            log.info("Duplicated messageIds found: message with id {} for bpId {} not found in S3. Saving it again...", messageId, bpId);
+            storeInputStreamInS3AndSendEvents(inputStream, messageId, bpId, messageType, partnerTopic, partnerExternalReference, rawMessageContent, contentType);
+        }
+    }
+
+    private String computeChecksum(InputStream inputStream) throws IOException {
+        MessageDigest messageDigest;
+
+        try {
+            messageDigest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+
+        try (DigestInputStream dis = new DigestInputStream(inputStream, messageDigest)) {
+            byte[] buffer = new byte[8192];
+            while (dis.read(buffer) != -1) {
+                // just consume
+            }
+        }
+        return toHex(messageDigest.digest());
+    }
+
+    private String toHex(byte[] hash) {
+        StringBuilder hex = new StringBuilder();
+        for (byte b : hash) {
+            hex.append(String.format("%02x", b));
+        }
+        return hex.toString();
     }
 
     /**
-     * Legacy save with xml validation for internal messages.
+     * Legacy save with XML validation for internal messages.
      * This method is kept for backward compatibility.
      */
     public void saveNewMessageFromInternalApplicationLegacy(Message message, MessageContent rawMessageContent) throws IOException {
@@ -231,12 +299,12 @@ public class MessageExchangeService {
             publishMessageReceivedEvent(scanResultInfo.objectKey(), s3ObjectMetadata);
         } else {
             log.debug("Not publishing MessageReceivedEvent again for message with id '{}' from business partner with id '{}' " +
-                    "and with external reference '{}' and with scan result '{}'.", scanResultInfo.objectKey(),
+                            "and with external reference '{}' and with scan result '{}'.", scanResultInfo.objectKey(),
                     s3ObjectMetadata.tags().bpId(), s3ObjectMetadata.tags().partnerExternalReference(), scanResultInfo.scanResult());
         }
     }
 
-    private boolean shouldNotifyMessageReceivedEvent(S3ObjectMalwareScanResultInfo  scanResultInfo, S3ObjectMetadata s3ObjectMetadata) {
+    private boolean shouldNotifyMessageReceivedEvent(S3ObjectMalwareScanResultInfo scanResultInfo, S3ObjectMetadata s3ObjectMetadata) {
         return threatsHaveBeenDetected(scanResultInfo.scanResult()) ||  // we always want to notify about threats
                 !malwareScanWasDisabledWhenReceivingNotifiedMessage(s3ObjectMetadata); // already notified when message was received
     }

@@ -13,4 +13,6 @@ public interface MetricsService {
      */
     void publishMetrics(MalwareScanResult scanResult, long messageArrivalTimeInMillis, Long saveTimeInMillis);
 
+    void duplicatedMessageIdReceived(String bpId);
+
 }

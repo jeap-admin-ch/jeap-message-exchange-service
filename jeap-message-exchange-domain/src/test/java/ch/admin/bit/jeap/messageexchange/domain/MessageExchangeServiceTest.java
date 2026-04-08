@@ -1,8 +1,10 @@
 package ch.admin.bit.jeap.messageexchange.domain;
 
+import ch.admin.bit.jeap.messageexchange.domain.database.InboundMessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.PublishedScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.S3ObjectMalwareScanResultInfo;
@@ -11,12 +13,13 @@ import ch.admin.bit.jeap.messageexchange.domain.messaging.EventPublisher;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.BucketType;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
-import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsUpdateResult;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsService;
+import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsUpdateResult;
 import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
 import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanResult;
 import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanTrigger;
+import io.micrometer.common.annotation.ValueExpressionResolver;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -46,7 +50,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyInt;
 
 @SuppressWarnings("unused")
 @ExtendWith(MockitoExtension.class)
@@ -78,6 +81,9 @@ class MessageExchangeServiceTest {
 
         @Override
         public Optional<MessageContent> loadMessage(BucketType bucketType, String objectKey) {
+            if (storedMessage == null) {
+                return Optional.empty();
+            }
             return Optional.of(new MessageContent(new ByteArrayInputStream(storedMessage.getBytes(UTF_8)), storedMessage.getBytes(UTF_8).length));
         }
 
@@ -116,6 +122,9 @@ class MessageExchangeServiceTest {
     private MessageRepository messageRepository;
 
     @Mock
+    private InboundMessageRepository inboundMessageRepository;
+
+    @Mock
     private MalwareScanProperties malwareScanProperties;
 
     @Mock
@@ -125,8 +134,9 @@ class MessageExchangeServiceTest {
     private MetricsService metricsService;
 
     @BeforeEach
+    @SneakyThrows
     void setup() {
-        messageExchangeService = new MessageExchangeService(objectStore, eventPublisher, messageRepository, malwareScanProperties, messageSentProperties, metricsService, new S3ObjectTagsService(), Optional.empty());
+        messageExchangeService = new MessageExchangeService(objectStore, eventPublisher, messageRepository, inboundMessageRepository, malwareScanProperties, messageSentProperties, metricsService, new S3ObjectTagsService(), Optional.empty());
     }
 
     @Test
@@ -146,12 +156,97 @@ class MessageExchangeServiceTest {
                 .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
                 .containsEntry("scanStatus", ScanStatus.NOT_SCANNED.name());
 
+        ArgumentCaptor<InboundMessage> captor = ArgumentCaptor.forClass(InboundMessage.class);
+        verify(inboundMessageRepository).save(captor.capture());
+        InboundMessage capturedInboundMessage = captor.getValue();
+        assertThat(capturedInboundMessage.getBpId()).isEqualTo(bpId);
+        assertThat(capturedInboundMessage.getMessageId()).isEqualTo(messageId);
+        assertThat(capturedInboundMessage.getContentLength()).isEqualTo(42);
+
         verify(messageRepository, never()).save(any(Message.class));
     }
 
     @Test
     @SneakyThrows
-    void saveNewMessageFromPartnerMalwareScanEnabled_xmlValid_messageNotSaved() {
+    void saveNewMessageFromPartner_messageIdAlreadySent_contentMatches_messageNotSaved() {
+        UUID messageId = UUID.randomUUID();
+        String bpId = "bpId";
+        String messageType = "messageType";
+        String xmlContentString = "<valid/>";
+        InputStream xmlContent = new ByteArrayInputStream(xmlContentString.getBytes(UTF_8));
+        InboundMessage inboundMessage = InboundMessage.builder().bpId(bpId).messageId(messageId).contentLength(42).build();
+        when(inboundMessageRepository.findByBpIdAndMessageId(bpId, messageId)).thenReturn(Optional.of(inboundMessage));
+        objectStore.storeMessage(BucketType.PARTNER, messageId.toString(),
+                new MessageContent(new ByteArrayInputStream(xmlContentString.getBytes(UTF_8)), xmlContentString.getBytes(UTF_8).length),
+                MediaType.APPLICATION_XML_VALUE);
+        messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, new MessageContent(xmlContent, 42));
+
+        verify(eventPublisher, never()).publishMessageReceivedEvent(messageId, bpId, messageType, null, null, PublishedScanStatus.NOT_SCANNED, MediaType.APPLICATION_XML_VALUE);
+
+        verify(inboundMessageRepository, never()).save(any(InboundMessage.class));
+        verify(messageRepository, never()).save(any(Message.class));
+    }
+
+    @Test
+    @SneakyThrows
+    void saveNewMessageFromPartner_messageIdAlreadySent_contentLengthDoesNotMatch_throwsException() {
+        UUID messageId = UUID.randomUUID();
+        String bpId = "bpId";
+        String messageType = "messageType";
+        String xmlContentString = "<valid/>";
+        InputStream xmlContent = new ByteArrayInputStream(xmlContentString.getBytes(UTF_8));
+        InboundMessage inboundMessage = InboundMessage.builder().bpId(bpId).messageId(messageId).contentLength(404).build();
+        when(inboundMessageRepository.findByBpIdAndMessageId(bpId, messageId)).thenReturn(Optional.of(inboundMessage));
+
+        MismatchedContentException mismatchedContentException = assertThrows(MismatchedContentException.class, () -> messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, new MessageContent(xmlContent, 42)));
+        assertThat(mismatchedContentException.getMessage()).contains("Message with messageId " + messageId + " already exists but has different content length");
+
+        verify(inboundMessageRepository, never()).save(any(InboundMessage.class));
+    }
+
+    @Test
+    @SneakyThrows
+    void saveNewMessageFromPartner_messageIdAlreadySent_contentDoesNotMatch_throwsException() {
+        UUID messageId = UUID.randomUUID();
+        String bpId = "bpId";
+        String messageType = "messageType";
+        String xmlContentString = "<valid/>";
+        InputStream xmlContent = new ByteArrayInputStream(xmlContentString.getBytes(UTF_8));
+        InboundMessage inboundMessage = InboundMessage.builder().bpId(bpId).messageId(messageId).contentLength(42).build();
+        objectStore.storeMessage(BucketType.PARTNER, messageId.toString(),
+                new MessageContent(new ByteArrayInputStream("<different>content</different>".getBytes(UTF_8)), "<different>content</different>".getBytes(UTF_8).length),
+                MediaType.APPLICATION_XML_VALUE);
+        when(inboundMessageRepository.findByBpIdAndMessageId(bpId, messageId)).thenReturn(Optional.of(inboundMessage));
+
+        MismatchedContentException mismatchedContentException = assertThrows(MismatchedContentException.class, () -> messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, new MessageContent(xmlContent, 42)));
+        assertThat(mismatchedContentException.getMessage()).contains("Message with messageId " + messageId + " already exists but has different content");
+
+        verify(inboundMessageRepository, never()).save(any(InboundMessage.class));
+    }
+
+    @Test
+    @SneakyThrows
+    void saveNewMessageFromPartner_messageIdAlreadySent_contentNotFoundInS3_messageSavedAgain() {
+        UUID messageId = UUID.randomUUID();
+        String bpId = "bpId";
+        String messageType = "messageType";
+        String xmlContentString = "<valid/>";
+        InputStream xmlContent = new ByteArrayInputStream(xmlContentString.getBytes(UTF_8));
+        InboundMessage inboundMessage = InboundMessage.builder().bpId(bpId).messageId(messageId).contentLength(42).build();
+        when(inboundMessageRepository.findByBpIdAndMessageId(bpId, messageId)).thenReturn(Optional.of(inboundMessage));
+
+        messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, new MessageContent(xmlContent, 42));
+        verify(eventPublisher).publishMessageReceivedEvent(messageId, bpId, messageType, null, null, PublishedScanStatus.NOT_SCANNED, MediaType.APPLICATION_XML_VALUE);
+        assertThat(storedMessage).isEqualTo(xmlContentString);
+        assertThat(storedTags)
+                .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
+                .containsEntry("scanStatus", ScanStatus.NOT_SCANNED.name());
+        verify(inboundMessageRepository, never()).save(any(InboundMessage.class));
+    }
+
+    @Test
+    @SneakyThrows
+    void saveNewMessageFromPartnerMalwareScanEnabled_xmlValid_messageSaved() {
         UUID messageId = UUID.randomUUID();
         String bpId = "bpId";
         String messageType = "messageType";
@@ -167,6 +262,8 @@ class MessageExchangeServiceTest {
         assertThat(storedTags)
                 .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
                 .containsEntry("scanStatus", ScanStatus.SCAN_PENDING.name());
+
+        verify(inboundMessageRepository).save(any(InboundMessage.class));
 
         verify(messageRepository, never()).save(any(Message.class));
     }
@@ -177,7 +274,7 @@ class MessageExchangeServiceTest {
         when(malwareScanProperties.isEnabled()).thenReturn(true);
         MalwareScanTrigger malwareScanTrigger = mock(MalwareScanTrigger.class);
 
-        messageExchangeService = new MessageExchangeService(objectStore, eventPublisher, messageRepository, malwareScanProperties, messageSentProperties, metricsService, new S3ObjectTagsService(), Optional.of(malwareScanTrigger));
+        messageExchangeService = new MessageExchangeService(objectStore, eventPublisher, messageRepository, inboundMessageRepository, malwareScanProperties, messageSentProperties, metricsService, new S3ObjectTagsService(), Optional.of(malwareScanTrigger));
 
         UUID messageId = UUID.randomUUID();
         String bpId = "bpId";
@@ -187,13 +284,15 @@ class MessageExchangeServiceTest {
 
         messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, new MessageContent(xmlContent, 42));
 
-        verify(malwareScanTrigger).triggerScan(eq(messageId.toString()), eq(PARTNER_BUCKET_NAME), any(InputStream.class), anyInt());
+        verify(malwareScanTrigger).triggerScan(messageId.toString(), PARTNER_BUCKET_NAME);
 
         verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
         assertThat(storedMessage).isEqualTo(xmlContentString);
         assertThat(storedTags)
                 .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
                 .containsEntry("scanStatus", ScanStatus.SCAN_PENDING.name());
+
+        verify(inboundMessageRepository).save(any(InboundMessage.class));
 
         verify(messageRepository, never()).save(any(Message.class));
     }
@@ -212,6 +311,9 @@ class MessageExchangeServiceTest {
 
         verify(eventPublisher, never()).publishMessageReceivedEvent(any(UUID.class), anyString(), anyString(), anyString(), anyString(), any(PublishedScanStatus.class), anyString());
         assertThat(storedMessage).isNull();
+
+        verify(inboundMessageRepository, never()).save(any(InboundMessage.class));
+
         verify(messageRepository, never()).save(any(Message.class));
     }
 
@@ -233,6 +335,8 @@ class MessageExchangeServiceTest {
         assertThat(storedTags)
                 .containsKeys("bpId", "messageType", "scanStatus", "saveTimeInMillis")
                 .containsEntry("scanStatus", ScanStatus.NOT_SCANNED.name());
+
+        verify(inboundMessageRepository).save(any(InboundMessage.class));
 
         verify(messageRepository, never()).save(any(Message.class));
     }

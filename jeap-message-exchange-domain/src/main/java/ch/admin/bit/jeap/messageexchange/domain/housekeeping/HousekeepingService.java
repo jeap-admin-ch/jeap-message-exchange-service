@@ -1,5 +1,6 @@
 package ch.admin.bit.jeap.messageexchange.domain.housekeeping;
 
+import ch.admin.bit.jeap.messageexchange.domain.database.InboundMessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 public class HousekeepingService {
 
     private final MessageRepository messageRepository;
+    private final InboundMessageRepository inboundMessageRepository;
     private final HousekeepingProperties props;
 
     @Scheduled(cron = "${jeap.messageexchange.housekeeping.cron:-}")
@@ -34,6 +36,17 @@ public class HousekeepingService {
             }
             if (i == props.getMaxBatches() - 1) {
                 log.warn("Deleted expired messages in {} batches, but maxBatches was reached - not cleaning up any more batches", i);
+            }
+        }
+
+        for (int i = 0; i < props.getMaxBatches(); i++) {
+            boolean deletedExpiredMessages = inboundMessageRepository.deleteExpiredMessages(props.getExpirationDays(), props.getBatchSize());
+            if (!deletedExpiredMessages) {
+                log.info("Deleted expired inbound messages in {} batches", i);
+                break;
+            }
+            if (i == props.getMaxBatches() - 1) {
+                log.warn("Deleted expired inbound messages in {} batches, but maxBatches was reached - not cleaning up any more batches", i);
             }
         }
     }

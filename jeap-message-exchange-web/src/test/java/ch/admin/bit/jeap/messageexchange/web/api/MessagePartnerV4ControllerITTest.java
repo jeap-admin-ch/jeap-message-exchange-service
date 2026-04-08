@@ -4,6 +4,7 @@ import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.domain.MessageExchangeService;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
 import ch.admin.bit.jeap.security.resource.semanticAuthentication.SemanticApplicationRole;
@@ -99,6 +100,19 @@ class MessagePartnerV4ControllerITTest {
                 .andExpect(status().isNotAcceptable());
 
         verify(messageExchangeService, never()).saveNewMessageFromPartner(eq(messageId), eq(bpId), anyString(), anyString(), anyString(), any(), anyString());
+    }
+
+    @Test
+    void putNewMessageWithSameMessageId_whenInvalidContent_thenReturnsConflict() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        String bpId = UUID.randomUUID().toString();
+        String messageType = "messageType";
+        String xmlContent = "dummy";
+        doThrow(MismatchedContentException.checksumDoesNotMatch(UUID.randomUUID()))
+                .when(messageExchangeService).saveNewMessageFromPartner(eq(messageId), eq(bpId), eq(messageType), eq(null), eq(null), any(), anyString());
+
+        performPutMessage(messageId.toString(), bpId, messageType, xmlContent, createAuthenticationForBpRoles(bpId, B2B_MESSAGE_IN_WRITE))
+                .andExpect(status().isConflict());
     }
 
     @Test

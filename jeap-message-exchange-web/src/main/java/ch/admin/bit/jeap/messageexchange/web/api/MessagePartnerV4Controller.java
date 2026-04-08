@@ -2,6 +2,7 @@ package ch.admin.bit.jeap.messageexchange.web.api;
 
 import ch.admin.bit.jeap.messageexchange.domain.MessageExchangeService;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
+import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.web.api.dto.MessagesResultJsonDto;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidBpIdException;
@@ -64,11 +65,11 @@ public class MessagePartnerV4Controller {
             @RequestHeader(HttpHeaders.CONTENT_TYPE) @Parameter(description = "Content-Type of the message body") String contentTypeHeader,
             @RequestHeader(value = HEADER_PARTNER_TOPIC, required = false) @Parameter(description = "Partner Topic") String partnerTopic,
             @RequestHeader(value = HEADER_PARTNER_EXTERNAL_REFERENCE, required = false) @Parameter(description = "Partner External Reference") String partnerExternalReference,
-            HttpServletRequest request) throws InvalidBpIdException, IOException, UnsupportedMediaTypeException {
+            HttpServletRequest request) throws InvalidBpIdException, IOException, UnsupportedMediaTypeException, MismatchedContentException {
 
         String contentType = controllerStreams.validateContentType(contentTypeHeader);
 
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_IN, Roles.WRITE);
             log.info("Send new message with messageId {}, bpId {}, messageType {}, size {}, contentType {}", messageId, bpId, messageType, request.getContentLength(), contentType);
             messageExchangeService.saveNewMessageFromPartner(messageId, bpId, messageType, partnerTopic, partnerExternalReference, controllerStreams.getRequestContent(request), contentType);
@@ -93,9 +94,10 @@ public class MessagePartnerV4Controller {
         return getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, partnerExternalReference, size, MessagesResultJsonDto::createDto);
     }
 
+    @SuppressWarnings("java:S107")
     private MessagesResultJsonDto getMessages(String bpId, String topicName, String groupId, UUID lastMessageId, String partnerTopic, String partnerExternalReference, int size, Function<List<MessageSearchResultDto>, MessagesResultJsonDto> dtoFactory) throws InvalidBpIdException {
 
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcBpId(bpId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcBpId(bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Get messages with bpId {}, topicName {}, groupId {}, lastMessageId {}, partnerTopic {}, partnerExternalReference {}, size {}", bpId, topicName, groupId, lastMessageId, partnerTopic, partnerExternalReference, size);
             List<MessageSearchResultDto> searchResults = messageExchangeService.getMessages(bpId, topicName, groupId, lastMessageId, partnerTopic, partnerExternalReference, size);
@@ -113,7 +115,7 @@ public class MessagePartnerV4Controller {
             @RequestHeader(HttpHeaders.ACCEPT) @Parameter(description = "Content-Type of the message body") String accept
     ) throws InvalidBpIdException, MismatchedContentTypeException {
 
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Received get message request for messageId {} and bpId {}", messageId, bpId);
             return messageExchangeService.getMessageFromInternalApplication(bpId, messageId, accept)
@@ -139,7 +141,7 @@ public class MessagePartnerV4Controller {
             @RequestParam(value = QUERY_PARAM_TOPIC_NAME, required = false) @Parameter(description = "Get only messages from given topicName") String topicName,
             @RequestParam(value = QUERY_PARAM_PARTNER_EXTERNAL_REFERENCE, required = false) @Parameter(description = "Partner External Reference") String partnerExternalReference) throws InvalidBpIdException {
 
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(lastMessageId, bpId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(lastMessageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);
             log.debug("Received get next message request with lastMessageId {}, bpId {}, partnerTopic {}, topicName {}, partnerExternalReference {}", lastMessageId, bpId, partnerTopic, topicName, partnerExternalReference);
             return messageExchangeService.getNextMessageFromInternalApplication(lastMessageId, bpId, partnerTopic, topicName, partnerExternalReference)
