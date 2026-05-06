@@ -1,17 +1,18 @@
 package ch.admin.bit.jeap.messageexchange.web.api;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.filter.UrlHandlerFilter;
 
 @Configuration
-public class WebConfiguration implements WebMvcConfigurer {
+public class WebConfiguration {
 
-    @Override
-    public void configurePathMatch(PathMatchConfigurer configurer) {
-        // Note: This is deprecated and should be replaced with a UrlHandlerFilter after the spring boot 3.4 upgrade
-        // https://docs.spring.io/spring-framework/reference/6.2-SNAPSHOT/web/webmvc/filters.html#filters.url-handler
-        configurer.setUseTrailingSlashMatch(true);
+    @Bean
+    public UrlHandlerFilter urlHandlerFilter() {
+        return UrlHandlerFilter
+                .trailingSlashHandler("/**")
+                .wrapRequest()
+                .build();
     }
 
 }

@@ -1,7 +1,7 @@
 package ch.admin.bit.jeap.messageexchange.web;
 
 import lombok.experimental.UtilityClass;
-import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -34,7 +34,7 @@ public final class LocalStackTestSupport {
      */
     public static S3Client createS3Client(LocalStackContainer localStack) {
         return S3Client.builder()
-                .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
+                .endpointOverride(localStack.getEndpoint())
                 .region(Region.of(localStack.getRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))

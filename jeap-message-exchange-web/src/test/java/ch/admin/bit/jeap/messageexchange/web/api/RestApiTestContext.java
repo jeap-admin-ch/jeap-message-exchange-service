@@ -6,10 +6,12 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 
 @Profile("controller-test") // prevent other tests using class path scanning picking up this configuration
 @Configuration
 @ComponentScan
+@EnableWebSecurity
 @EnableConfigurationProperties({MessageExchangeApiProperties.class})
 public class RestApiTestContext extends ServletJeapAuthorizationConfig {
 

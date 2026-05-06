@@ -17,8 +17,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
@@ -35,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
         "spring.application.name=junit"
 })
 @ContextConfiguration(classes = PersistenceConfiguration.class)
-@Testcontainers
 class JdbcMessageRepositoryITTest {
 
     @Autowired
@@ -55,7 +53,7 @@ class JdbcMessageRepositoryITTest {
     @MockitoBean
     @SuppressWarnings("unused")
     private EventPublisher eventPublisher;
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
 
     @BeforeAll
     static void startContainers() {

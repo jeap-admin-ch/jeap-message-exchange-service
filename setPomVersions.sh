@@ -5,4 +5,4 @@
 #
 # after this mvn clean install and commit and push it to the develop branch
 #
-./mvnw versions:set -DnewVersion=$1
+./mvnw versions:set -DnewVersion=$1 -DgenerateBackupPoms=false

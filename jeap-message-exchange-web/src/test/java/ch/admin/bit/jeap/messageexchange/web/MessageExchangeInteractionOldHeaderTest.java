@@ -21,7 +21,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
+import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.io.Resource;
@@ -31,10 +31,10 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.localstack.LocalStackContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
@@ -72,7 +72,7 @@ import static org.mockito.Mockito.verify;
         })
 @ContextConfiguration(classes = {MessageExchangeApplication.class, JeapOAuth2IntegrationTestResourceConfiguration.class})
 @Testcontainers
-@AutoConfigureObservability
+@AutoConfigureMetrics
 @SuppressWarnings("resource")
 //TODO: JEAP-5099 delete class
 class MessageExchangeInteractionOldHeaderTest extends KafkaIntegrationTestBase {
@@ -98,7 +98,7 @@ class MessageExchangeInteractionOldHeaderTest extends KafkaIntegrationTestBase {
     @Autowired
     private MessageRepository messageRepository;
 
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
 
     @BeforeAll
     static void startContainers() {
@@ -141,7 +141,7 @@ class MessageExchangeInteractionOldHeaderTest extends KafkaIntegrationTestBase {
         registry.add("jeap.messageexchange.objectstorage.connection.region", () -> localStack.getRegion());
         registry.add("jeap.messageexchange.objectstorage.connection.access-key", () -> localStack.getAccessKey());
         registry.add("jeap.messageexchange.objectstorage.connection.secret-key", () -> localStack.getSecretKey());
-        registry.add("jeap.messageexchange.objectstorage.connection.accessUrl", () -> localStack.getEndpointOverride(LocalStackContainer.Service.S3));
+        registry.add("jeap.messageexchange.objectstorage.connection.accessUrl", () -> localStack.getEndpoint());
         registry.add("spring.datasource.url", () -> postgres.getJdbcUrl());
         registry.add("spring.datasource.username", () -> postgres.getUsername());
         registry.add("spring.datasource.password", () -> postgres.getPassword());

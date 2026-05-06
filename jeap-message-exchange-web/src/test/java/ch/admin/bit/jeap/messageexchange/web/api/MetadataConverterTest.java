@@ -1,9 +1,9 @@
 package ch.admin.bit.jeap.messageexchange.web.api;
 
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidMetadataException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Base64;
 import java.util.Map;
@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class MetadataConverterTest {
 
-    private final MetadataConverter metadataConverter = new MetadataConverter(new ObjectMapper());
+    private final MetadataConverter metadataConverter = new MetadataConverter(new JsonMapper());
     private final Base64.Encoder encoder = java.util.Base64.getEncoder();
 
     @Test

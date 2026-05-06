@@ -1,13 +1,13 @@
 package ch.admin.bit.jeap.messageexchange.web.api;
 
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidMetadataException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
 import com.networknt.schema.*;
 import com.networknt.schema.Error;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.Base64;
 import java.util.List;
@@ -18,12 +18,12 @@ import java.util.Map;
 public class MetadataConverter {
 
     private final Schema schemaFromSchemaLocation;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
-    public MetadataConverter(ObjectMapper objectMapper) {
+    public MetadataConverter(JsonMapper jsonMapper) {
         schemaFromSchemaLocation = SchemaRegistry.builder().build().getSchema(SchemaLocation.of("classpath:schema/mes-metadata-schema.json"));
         schemaFromSchemaLocation.initializeValidators();
-        this.objectMapper = objectMapper;
+        this.jsonMapper = jsonMapper;
     }
 
     public Map<String, String> convertToJson(String base64Content) throws InvalidMetadataException {
@@ -34,8 +34,8 @@ public class MetadataConverter {
             throw InvalidMetadataException.invalidJsonSchema();
         }
         try {
-            return objectMapper.readValue(content, new TypeReference<>() {});
-        } catch (JsonProcessingException e) {
+            return jsonMapper.readValue(content, new TypeReference<>() {});
+        } catch (JacksonException _) {
             throw InvalidMetadataException.invalidJson();
         }
     }
@@ -44,12 +44,7 @@ public class MetadataConverter {
         if (metadata == null || metadata.isEmpty()) {
             return null;
         }
-        try {
-            return Base64.getEncoder().encodeToString(objectMapper.writeValueAsString(metadata).getBytes());
-        } catch (JsonProcessingException e) {
-            log.warn("Cannot convert metadata to base64", e);
-            throw new IllegalStateException("Cannot convert metadata to base64", e);
-        }
+        return Base64.getEncoder().encodeToString(jsonMapper.writeValueAsString(metadata).getBytes());
     }
 
     private List<Error> validateJson(String headerContent) throws InvalidMetadataException {
