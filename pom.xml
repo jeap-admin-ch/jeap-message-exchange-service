@@ -46,7 +46,7 @@
         <json-schema-validator.version>3.0.0</json-schema-validator.version>
         <jackson-3.version>3.1.1</jackson-3.version>
         <!-- CVE-2026-33870: pin netty-codec-http to 4.1.132.Final -->
-        <netty.version>4.1.132.Final</netty.version>
+        <netty.version>4.1.133.Final</netty.version>
     </properties>
 
     <modules>
