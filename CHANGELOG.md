@@ -7,6 +7,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 > - Spring Boot 3 maintenance (bug fixes, patches, and regular updates) continues on branch `release/springboot3`.
 
+## [7.0.1] - 2026-05-29
+
+### Changed
+
+- Set spring.jpa.open-in-view=false per default.
+
 ## [7.0.0] - 2026-05-28
 
 ### Changed
