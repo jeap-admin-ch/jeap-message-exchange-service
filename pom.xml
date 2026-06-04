@@ -39,9 +39,9 @@
     <packaging>pom</packaging>
 
     <properties>
-        <json-schema-validator.version>3.0.2</json-schema-validator.version>
+        <json-schema-validator.version>3.0.3</json-schema-validator.version>
         <testcontainers.junit-jupiter.version>1.21.4</testcontainers.junit-jupiter.version>
-        <netty.version>4.1.133.Final</netty.version>
+        <netty.version>4.2.15.Final</netty.version>
         <maven.javadoc.skip>false</maven.javadoc.skip>
         <sonar.coverage.exclusions>**/Pacticipants.java,**/PactProviderTestBase.java</sonar.coverage.exclusions>
     </properties>
