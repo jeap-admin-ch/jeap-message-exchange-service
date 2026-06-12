@@ -59,8 +59,6 @@ class KafkaEventPublisherITTest extends KafkaIntegrationTestBase {
 
     private final List<B2BMessageReceivedEvent> messages = new CopyOnWriteArrayList<>();
 
-    private final List<B2BMessageReceivedEvent> messagesOnJunitTest = new CopyOnWriteArrayList<>();
-
     @Test
     void publishMessageReceivedEvent() {
         String bpId = UUID.randomUUID().toString();
@@ -75,7 +73,7 @@ class KafkaEventPublisherITTest extends KafkaIntegrationTestBase {
 
         Awaitility.await()
                 .atMost(Duration.ofSeconds(30))
-                .until(() -> (messages.size() == 1 && messagesOnJunitTest.size() == 1));
+                .until(() -> messages.size() == 1);
 
         // message sent from mes
         assertThat(messages.getFirst().getReferences().getMessageReference().getBpId()).isEqualTo(bpId);
@@ -90,25 +88,11 @@ class KafkaEventPublisherITTest extends KafkaIntegrationTestBase {
         assertThat(messages.getFirst().getReferences().getMessageReference().getPartnerTopic()).isEqualTo(partnerTopic);
         assertThat(messages.getFirst().getReferences().getMessageReference().getPartnerExternalReference()).isEqualTo(partnerExternalReference);
 
-        // message sent from plugin-api listener
-        assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getBpId()).isEqualTo(bpId + "_plugin");
-        assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getMessageId()).isEqualTo(messageId + "_plugin");
-        assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getType()).isEqualTo(messageType + "_plugin");
-        assertThat(messagesOnJunitTest.getFirst().getType().getVariant()).isEqualTo("junit");
-        assertThat(messagesOnJunitTest.getFirst().getReferences().getMessageReference().getContentType()).isEqualTo("junit");
-        assertThat(messagesOnJunitTest.getFirst().getPublisher().getSystem()).isEqualTo("junit");
-        assertThat(messagesOnJunitTest.getFirst().getPublisher().getService()).isEqualTo("junit");
-
     }
 
     @TestKafkaListener(topics = "message-received")
     public void onEvent(@Payload B2BMessageReceivedEvent message) {
         this.messages.add(message);
-    }
-
-    @TestKafkaListener(topics = "junit-test")
-    public void onEventOnJunitTest(@Payload B2BMessageReceivedEvent message) {
-        this.messagesOnJunitTest.add(message);
     }
 
 }

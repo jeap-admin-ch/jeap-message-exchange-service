@@ -15,16 +15,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
 
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class KafkaEventPublisherTest {
@@ -47,7 +44,7 @@ class KafkaEventPublisherTest {
         when(kafkaProperties.getServiceName()).thenReturn("test-service");
         when(kafkaTemplate.send(anyString(), any(AvroMessage.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
-        kafkaEventPublisher = new KafkaEventPublisher(kafkaTemplate, topicConfiguration, kafkaProperties, List.of());
+        kafkaEventPublisher = new KafkaEventPublisher(kafkaTemplate, topicConfiguration, kafkaProperties);
     }
 
     @ParameterizedTest
