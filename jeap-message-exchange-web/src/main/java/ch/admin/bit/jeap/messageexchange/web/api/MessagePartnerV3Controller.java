@@ -5,7 +5,6 @@ import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.web.api.dto.MessagesResultDto;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidBpIdException;
-import ch.admin.bit.jeap.messageexchange.web.api.exception.MissingRequiredHeaderException;
 import ch.admin.bit.jeap.messageexchange.web.api.mdc.MessageIdBpIdMdcCloseable;
 import ch.admin.bit.jeap.messageexchange.web.api.stream.ControllerStreams;
 import ch.admin.bit.jeap.security.resource.semanticAuthentication.ServletSemanticAuthorization;
@@ -126,7 +125,7 @@ public class MessagePartnerV3Controller {
             @PathVariable(MESSAGE_ID) @Parameter(description = "Unique message identification as UUID: cc7d5097-4d3f-4fff-af91-fd3680199642") UUID lastMessageId,
             @RequestHeader(HEADER_BP_ID) @Parameter(description = "Partner identification") String bpId,
             @RequestParam(value = QUERY_PARAM_PARTNER_TOPIC, required = false) @Parameter(description = "Partner Topic") String partnerTopic,
-            @RequestParam(value = QUERY_PARAM_TOPIC_NAME, required = false) @Parameter(description = "Get only messages from given topicName") String topicName) throws InvalidBpIdException, MissingRequiredHeaderException {
+            @RequestParam(value = QUERY_PARAM_TOPIC_NAME, required = false) @Parameter(description = "Get only messages from given topicName") String topicName) throws InvalidBpIdException {
 
         try (var _ = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(lastMessageId, bpId)) {
             validateAuthorizedForBpId(bpId, Roles.MESSAGE_OUT, Roles.READ);

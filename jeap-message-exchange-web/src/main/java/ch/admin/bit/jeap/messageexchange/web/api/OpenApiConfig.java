@@ -18,29 +18,12 @@ import org.springframework.context.annotation.Configuration;
 )
 @Configuration
 public class OpenApiConfig {
-    @Bean
-    GroupedOpenApi internalApiV2() {
-        return GroupedOpenApi.builder()
-                .group("MessageExchange-Service-Internal-API-V2")
-                .pathsToMatch("/api/internal/v2/**")
-                .packagesToScan(this.getClass().getPackageName())
-                .build();
-    }
 
     @Bean
     GroupedOpenApi internalApiV3() {
         return GroupedOpenApi.builder()
                 .group("MessageExchange-Service-Internal-API-V3")
                 .pathsToMatch("/api/internal/v3/**")
-                .packagesToScan(this.getClass().getPackageName())
-                .build();
-    }
-
-    @Bean
-    GroupedOpenApi partnerApiV2() {
-        return GroupedOpenApi.builder()
-                .group("MessageExchange-Service-Partner-API-V2")
-                .pathsToMatch("/api/partner/v2/**")
                 .packagesToScan(this.getClass().getPackageName())
                 .build();
     }

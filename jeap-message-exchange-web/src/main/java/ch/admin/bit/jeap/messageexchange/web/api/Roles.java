@@ -1,6 +1,10 @@
 package ch.admin.bit.jeap.messageexchange.web.api;
 
 public final class Roles {
+    private Roles() {
+        /* This utility class should not be instantiated */
+    }
+
     static final String MESSAGE_OUT = "b2bmessageout";
     static final String READ = "read";
     static final String MESSAGE_IN = "b2bmessagein";

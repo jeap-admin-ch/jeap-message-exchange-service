@@ -90,8 +90,8 @@ public class ObjectStorageConfiguration {
                 .responseChecksumValidation(ResponseChecksumValidation.WHEN_REQUIRED)
                 .forcePathStyle(true)
                 .httpClientBuilder(UrlConnectionHttpClient.builder()
-                        .proxyConfiguration(ProxyConfiguration.builder() // Configure proxy to work around the issue https://github.com/aws/aws-sdk-java-v2/issues/4728 which is coming with the aws sdk update
-                                .useSystemPropertyValues(false)
+                        .proxyConfiguration( // Configure proxy to work around the issue https://github.com/aws/aws-sdk-java-v2/issues/4728 which is coming with the aws sdk update
+                                p -> p.useSystemPropertyValues(false)
                                 .useEnvironmentVariablesValues(false)
                                 .build())
                         .connectionTimeout(connectionProperties.getS3Timeout())

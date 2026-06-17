@@ -10,8 +10,10 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository {
@@ -82,9 +84,7 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
         PutObjectTaggingRequest request = PutObjectTaggingRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
-                .tagging(Tagging.builder()
-                        .tagSet(tagSet)
-                        .build())
+                .tagging(t -> t.tagSet(tagSet).build())
                 .build();
 
         s3Client.putObjectTagging(request);
@@ -101,7 +101,7 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
     private List<Tag> toTags(Map<String, String> tags) {
         return tags.entrySet().stream()
                 .map(entry -> Tag.builder().key(entry.getKey()).value(entry.getValue()).build())
-                .collect(Collectors.toList());
+                .toList();
     }
 
 }

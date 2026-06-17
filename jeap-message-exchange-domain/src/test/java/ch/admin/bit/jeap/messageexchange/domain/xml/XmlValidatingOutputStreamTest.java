@@ -2,7 +2,6 @@ package ch.admin.bit.jeap.messageexchange.domain.xml;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -44,7 +43,7 @@ class XmlValidatingOutputStreamTest {
     }
 
     @Test
-    void write_invalidIncompleteXml() throws IOException {
+    void write_invalidIncompleteXml() {
         byte[] data = "<note/".getBytes(UTF_8);
         XmlValidatingOutputStream xmlValidatingOutputStream = createXmlValidatingOutputStream(data.length);
 

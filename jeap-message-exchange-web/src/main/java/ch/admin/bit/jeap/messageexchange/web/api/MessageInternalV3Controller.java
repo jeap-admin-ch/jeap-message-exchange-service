@@ -4,7 +4,6 @@ import ch.admin.bit.jeap.messageexchange.domain.Message;
 import ch.admin.bit.jeap.messageexchange.domain.MessageExchangeService;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidMetadataException;
-import ch.admin.bit.jeap.messageexchange.web.api.exception.MissingRequiredHeaderException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.UnsupportedMediaTypeException;
 import ch.admin.bit.jeap.messageexchange.web.api.mdc.MessageIdBpIdMdcCloseable;
 import ch.admin.bit.jeap.messageexchange.web.api.stream.ControllerStreams;
@@ -60,10 +59,10 @@ public class MessageInternalV3Controller {
             @RequestHeader(HttpHeaders.CONTENT_TYPE) @Parameter(description = "Content-Type of the message body") String contentTypeHeader,
             @RequestHeader(value = HEADER_PARTNER_EXTERNAL_REFERENCE, required = false) @Parameter(description = "Partner External Reference") String partnerExternalReference,
             @RequestHeader(value = HEADER_MES_METADATA, required = false) @Parameter(description = "Metadata") String metadata,
-            HttpServletRequest request) throws IOException, MissingRequiredHeaderException, UnsupportedMediaTypeException, InvalidMetadataException {
+            HttpServletRequest request) throws IOException, UnsupportedMediaTypeException, InvalidMetadataException {
         String contentType = controllerStreams.validateContentType(contentTypeHeader);
 
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcMessageIdAndBpId(messageId, bpId)) {
             Message message = Message.builder()
                     .messageId(messageId)
                     .bpId(bpId)
@@ -99,7 +98,7 @@ public class MessageInternalV3Controller {
     @Timed(value = "jeap_mes_internal_controller_get_message", description = "Time taken to retrieve a message", percentiles = {0.5, 0.8, 0.95, 0.99})
     public ResponseEntity<InputStreamResource> getMessage(@PathVariable("messageId") @Parameter(description = "Message identification as UUID 12345678-1234-1234-1234-123456789012") UUID messageId,
                                                           @RequestHeader(HttpHeaders.ACCEPT) @Parameter(description = "Content-Type of the message body") String accept) throws MismatchedContentTypeException {
-        try (var ignored = MessageIdBpIdMdcCloseable.mdcMessageId(messageId)) {
+        try (var _ = MessageIdBpIdMdcCloseable.mdcMessageId(messageId)) {
             log.debug("Received get message request for messageId {}", messageId);
             return messageExchangeService.getMessageFromPartner(messageId, accept)
                     .map(ControllerStreams::toResponseEntityWithoutResponseHeaders)

@@ -15,7 +15,6 @@ import org.springframework.util.StringUtils;
 import java.io.IOException;
 import java.util.List;
 
-import static ch.admin.bit.jeap.messageexchange.web.api.DeprecatedHeaderNames.HEADER_MESSAGE_ID_OLD;
 import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
 
 @Slf4j
@@ -29,16 +28,6 @@ public class ControllerStreams {
 
     public static ResponseEntity<InputStreamResource> toResponseEntityWithoutResponseHeaders(MessageContent messageContent) {
         return ResponseEntity.ok()
-                .contentLength(messageContent.contentLength())
-                .body(new InputStreamResource(messageContent.inputStream()));
-    }
-
-    //TODO: JEAP-5099 remove
-    public static ResponseEntity<InputStreamResource> toResponseIncludingLegacyMessageIdHeader(MessageContent messageContent, String messageId) {
-        return ResponseEntity.ok()
-                //TODO: JEAP-5099 remove old header
-                .header(HEADER_MESSAGE_ID_OLD, messageId)
-                .header(HEADER_MESSAGE_ID, messageId)
                 .contentLength(messageContent.contentLength())
                 .body(new InputStreamResource(messageContent.inputStream()));
     }

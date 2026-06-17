@@ -1,6 +1,5 @@
 package ch.admin.bit.jeap.messageexchange.kafka;
 
-import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.DescribeTopicsResult;
@@ -16,14 +15,11 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class TopicConfigurationTest {
 
     private KafkaAdmin kafkaAdmin;
-    private MalwareScanProperties malwareScanProperties;
     private MessageSentProperties messageSentProperties;
     private TopicConfiguration topicConfiguration;
 
@@ -73,7 +69,7 @@ class TopicConfigurationTest {
     }
 
     @Test
-    void checkIfTopicsExist_messageSentEnabledTopicNotSet_exception() throws Exception {
+    void checkIfTopicsExist_messageSentEnabledTopicNotSet_exception() {
         when(messageSentProperties.isEnabled()).thenReturn(true);
 
         when(topicConfiguration.getMessageReceived()).thenReturn("message-received");

@@ -1,12 +1,11 @@
 package ch.admin.bit.jeap.messageexchange.web.api;
 
+import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
-import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidBpIdException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.InvalidMetadataException;
-import ch.admin.bit.jeap.messageexchange.web.api.exception.MissingRequiredHeaderException;
 import ch.admin.bit.jeap.messageexchange.web.api.exception.UnsupportedMediaTypeException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -60,14 +59,6 @@ public class RestResponseExceptionHandler extends ResponseEntityExceptionHandler
     @ExceptionHandler(MismatchedContentException.class)
     public ResponseEntity<String> handleMismatchedContentException(MismatchedContentException ex) {
         return ResponseEntity.status(409)
-                .body(ex.getMessage());
-    }
-
-    //TODO: JEAP-5099 remove method
-    @ExceptionHandler(MissingRequiredHeaderException.class)
-    public ResponseEntity<String> handleMissingRequiredHeaderException(MissingRequiredHeaderException ex) {
-        log.warn("Missing required header: {}", ex.getMessage());
-        return ResponseEntity.status(400)
                 .body(ex.getMessage());
     }
 

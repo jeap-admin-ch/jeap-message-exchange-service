@@ -96,7 +96,7 @@ public class JdbcMessageRepository implements MessageRepository {
 
         try {
             jdbcTemplate.update(INSERT_SQL, params);
-        } catch (DuplicateKeyException e) {
+        } catch (DuplicateKeyException _) {
             log.warn("Message with messageId {} already present in the database. Skipping...", message.getMessageId());
         }
     }

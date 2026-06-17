@@ -10,27 +10,30 @@ import java.util.UUID;
  */
 public class MessageIdBpIdMdcCloseable implements Closeable {
 
+    private static final String MESSAGE_ID = "messageId";
+    private static final String BP_ID = "bpId";
+
     private MessageIdBpIdMdcCloseable() {
     }
 
     public static MessageIdBpIdMdcCloseable mdcMessageIdAndBpId(UUID messageId, String bpId) {
-        MDC.put("messageId", messageId.toString());
-        MDC.put("bpId", bpId);
+        MDC.put(MESSAGE_ID, messageId.toString());
+        MDC.put(BP_ID, bpId);
         return new MessageIdBpIdMdcCloseable();
     }
 
     public static MessageIdBpIdMdcCloseable mdcMessageId(UUID messageId) {
-        MDC.put("messageId", messageId.toString());
+        MDC.put(MESSAGE_ID, messageId.toString());
         return new MessageIdBpIdMdcCloseable();
     }
 
     public static MessageIdBpIdMdcCloseable mdcBpId(String bpId) {
-        MDC.put("bpId", bpId);
+        MDC.put(BP_ID, bpId);
         return new MessageIdBpIdMdcCloseable();
     }
 
     public void close() {
-        MDC.remove("messageId");
-        MDC.remove("bpId");
+        MDC.remove(MESSAGE_ID);
+        MDC.remove(BP_ID);
     }
 }

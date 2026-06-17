@@ -27,6 +27,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -198,9 +199,10 @@ class MessageExchangeInteractionPartnerApiV3Test extends KafkaIntegrationTestBas
         Response response = given()
                 .spec(request)
                 .contentType(ContentType.XML)
+                .accept(MediaType.APPLICATION_XML_VALUE)
                 .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_IN_READ))
                 .when()
-                .get("/api/internal/v2/messages/" + messageId);
+                .get("/api/internal/v3/messages/" + messageId);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
         assertThat(response.getBody().asString()).isEqualTo(xmlContent);
@@ -231,9 +233,10 @@ class MessageExchangeInteractionPartnerApiV3Test extends KafkaIntegrationTestBas
         Response response = given()
                 .spec(request)
                 .contentType(ContentType.XML)
+                .accept(MediaType.APPLICATION_XML_VALUE)
                 .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_IN_READ))
                 .when()
-                .get("/api/internal/v2/messages/" + messageId);
+                .get("/api/internal/v3/messages/" + messageId);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND.value());
     }
@@ -278,7 +281,7 @@ class MessageExchangeInteractionPartnerApiV3Test extends KafkaIntegrationTestBas
                 .param("topicName", topicName)
                 .body(xmlContent)
                 .when()
-                .put("/api/internal/v2/messages/" + messageId)
+                .put("/api/internal/v3/messages/" + messageId)
                 .then()
                 .statusCode(HttpStatus.CREATED.value());
 
@@ -330,7 +333,7 @@ class MessageExchangeInteractionPartnerApiV3Test extends KafkaIntegrationTestBas
                 .param("topicName", topicName)
                 .body(xmlContent1)
                 .when()
-                .put("/api/internal/v2/messages/" + message1Id)
+                .put("/api/internal/v3/messages/" + message1Id)
                 .then()
                 .statusCode(HttpStatus.CREATED.value());
 
@@ -343,7 +346,7 @@ class MessageExchangeInteractionPartnerApiV3Test extends KafkaIntegrationTestBas
                 .param("topicName", topicName)
                 .body(xmlContent2)
                 .when()
-                .put("/api/internal/v2/messages/" + message2Id)
+                .put("/api/internal/v3/messages/" + message2Id)
                 .then()
                 .statusCode(HttpStatus.CREATED.value());
 
@@ -375,14 +378,14 @@ class MessageExchangeInteractionPartnerApiV3Test extends KafkaIntegrationTestBas
 
         given()
                 .spec(request)
-                .contentType(ContentType.XML)
+                .contentType(MediaType.APPLICATION_XML_VALUE)
                 .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_OUT_WRITE))
                 .header(HEADER_BP_ID, bpId)
                 .header(HEADER_MESSAGE_TYPE, messageType)
                 .param("topicName", topicName)
                 .body(xmlContent)
                 .when()
-                .put("/api/internal/v2/messages/" + messageId)
+                .put("/api/internal/v3/messages/" + messageId)
                 .then()
                 .statusCode(HttpStatus.BAD_REQUEST.value());
 
