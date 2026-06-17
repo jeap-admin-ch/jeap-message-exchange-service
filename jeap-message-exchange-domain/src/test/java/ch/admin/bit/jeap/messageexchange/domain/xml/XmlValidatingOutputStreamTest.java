@@ -8,7 +8,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
-@SuppressWarnings("resource")
+@SuppressWarnings({"resource", "java:S5976"}) //will be removed with JEAP-7176
 class XmlValidatingOutputStreamTest {
 
     @Test

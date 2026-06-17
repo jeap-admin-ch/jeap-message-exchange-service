@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
+@SuppressWarnings("java:S2095") //will be removed with JEAP-7176
 public class XmlValidatingOutputStream extends OutputStream {
 
     private static final AsyncXMLInputFactory XML_INPUT_FACTORY = new InputFactoryImpl();
