@@ -1,15 +1,15 @@
 package ch.admin.bit.jeap.messageexchange.web.api.dto;
 
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+import com.fasterxml.jackson.annotation.JsonRootName;
 import io.swagger.v3.oas.annotations.media.Schema;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 import java.util.List;
 
 @Schema(name = "messages")
-@JacksonXmlRootElement(localName = "messages")
+@JsonRootName("messages")
 public record MessagesResultDto(
         @JacksonXmlElementWrapper(useWrapping = false)
         @JacksonXmlProperty(localName = "message")

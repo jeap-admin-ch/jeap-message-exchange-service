@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -61,12 +61,12 @@ public class AbstractS3ObjectRepositoryTestBase {
         registry.add("jeap.messageexchange.objectstorage.connection.region", () -> localStack.getRegion());
         registry.add("jeap.messageexchange.objectstorage.connection.access-key", () -> localStack.getAccessKey());
         registry.add("jeap.messageexchange.objectstorage.connection.secret-key", () -> localStack.getSecretKey());
-        registry.add("jeap.messageexchange.objectstorage.connection.access-url", () -> localStack.getEndpointOverride(LocalStackContainer.Service.S3).toString());
+        registry.add("jeap.messageexchange.objectstorage.connection.access-url", () -> localStack.getEndpoint().toString());
 
         s3Client = S3Client.builder()
                 .region(Region.of(localStack.getRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
-                .endpointOverride(localStack.getEndpointOverride(LocalStackContainer.Service.S3))
+                .endpointOverride(localStack.getEndpoint())
                 .httpClientBuilder(UrlConnectionHttpClient.builder()
                         .proxyConfiguration(ProxyConfiguration.builder()
                                 .useSystemPropertyValues(false)

@@ -4,9 +4,6 @@ import ch.admin.bit.jeap.db.tx.TransactionalReadReplica;
 import ch.admin.bit.jeap.messageexchange.domain.Message;
 import ch.admin.bit.jeap.messageexchange.domain.database.MessageRepository;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.annotation.Timed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +14,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
@@ -27,7 +27,7 @@ import java.util.*;
 @Slf4j
 public class JdbcMessageRepository implements MessageRepository {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonMapper jsonMapper = new JsonMapper();
 
     private static final String INSERT_SQL = "INSERT INTO b2bhub_db_table(\"messageId\",\"bpId\",\"topicName\",\"groupId\",\"messageType\",\"datePublished\",\"partnerTopic\",\"contentType\",\"partnerExternalReference\",\"metadata\") VALUES (:messageId,:bpId,:topicName,:groupId,:messageType,:datePublished,:partnerTopic,:contentType,:partnerExternalReference,(:metadata::jsonb))";
     private static final String SELECT_BY_MESSAGE_ID = "SELECT * FROM b2bhub_db_table WHERE \"messageId\" = :messageId";
@@ -262,8 +262,9 @@ public class JdbcMessageRepository implements MessageRepository {
             return Map.of();
         }
         try {
-            return objectMapper.readValue(value, new TypeReference<>() {});
-        } catch (JsonProcessingException e) {
+            return jsonMapper.readValue(value, new TypeReference<>() {
+            });
+        } catch (JacksonException e) {
             throw new IllegalStateException("Cannot read JSON value as Map", e);
         }
     }
@@ -273,8 +274,8 @@ public class JdbcMessageRepository implements MessageRepository {
             return null;
         }
         try {
-            return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
+            return jsonMapper.writeValueAsString(value);
+        } catch (JacksonException e) {
             throw new IllegalStateException("Cannot write Map as JSON value", e);
         }
     }

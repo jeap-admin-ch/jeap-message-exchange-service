@@ -40,10 +40,12 @@
 
     <properties>
         <json-schema-validator.version>3.0.3</json-schema-validator.version>
-        <testcontainers.junit-jupiter.version>1.21.4</testcontainers.junit-jupiter.version>
+        <testcontainers.junit-jupiter.version>2.0.5</testcontainers.junit-jupiter.version>
         <netty.version>4.2.15.Final</netty.version>
         <maven.javadoc.skip>false</maven.javadoc.skip>
         <sonar.coverage.exclusions>**/Pacticipants.java,**/PactProviderTestBase.java</sonar.coverage.exclusions>
+        <aalto-xml.version>1.3.3</aalto-xml.version>
+        <commons-io.version>2.22.0</commons-io.version>
     </properties>
 
     <modules>
@@ -116,11 +118,11 @@
                 <artifactId>jeap-message-exchange-adapter-malware-aws-s3</artifactId>
                 <version>9.1.0-SNAPSHOT</version>
             </dependency>
+
             <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>junit-jupiter</artifactId>
-                <version>${testcontainers.junit-jupiter.version}</version>
-                <scope>test</scope>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${commons-io.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

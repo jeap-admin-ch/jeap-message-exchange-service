@@ -2,15 +2,14 @@ package ch.admin.bit.jeap.messageexchange.web.api;
 
 import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.domain.MessageExchangeService;
-import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
 import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultDto;
+import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithContentDto;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
 import ch.admin.bit.jeap.messageexchange.domain.xml.InvalidXMLInputException;
 import ch.admin.bit.jeap.security.resource.semanticAuthentication.SemanticApplicationRole;
 import ch.admin.bit.jeap.security.resource.token.JeapAuthenticationToken;
 import ch.admin.bit.jeap.security.test.resource.JeapAuthenticationTestTokenBuilder;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +22,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import tools.jackson.databind.json.JsonMapper;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.ByteArrayInputStream;
@@ -319,7 +319,7 @@ class MessagePartnerV4ControllerITTest {
         String bpId = UUID.randomUUID().toString();
         MessageContent messageContent = new MessageContent(new ByteArrayInputStream("123".getBytes(UTF_8)), 3);
         Map<String, String> metadata = Map.of("myKey", "myValue", "foo", "bar");
-        String metadataBase64 = Base64.getEncoder().encodeToString(new ObjectMapper().writeValueAsString(metadata).getBytes());
+        String metadataBase64 = Base64.getEncoder().encodeToString(new JsonMapper().writeValueAsString(metadata).getBytes());
         MessageSearchResultWithContentDto message = new MessageSearchResultWithContentDto(messageId, messageContent,"myTopic", "externalReference", metadata);
         when(messageExchangeService.getMessageFromInternalApplication(bpId, messageId, MediaType.APPLICATION_XML_VALUE))
                 .thenReturn(Optional.of(message));
@@ -646,7 +646,7 @@ class MessagePartnerV4ControllerITTest {
         MessageContent message = new MessageContent(new ByteArrayInputStream(bytes), bytes.length);
         UUID messageIdFromDatabase = UUID.randomUUID();
         Map<String, String> metadata = Map.of("myKey", "myValue", "foo", "bar");
-        String metadataBase64 = Base64.getEncoder().encodeToString(new ObjectMapper().writeValueAsString(metadata).getBytes());
+        String metadataBase64 = Base64.getEncoder().encodeToString(new JsonMapper().writeValueAsString(metadata).getBytes());
         MessageSearchResultWithContentDto messageSearchResultWithContentDto = new MessageSearchResultWithContentDto(messageIdFromDatabase, message,"myTopic", "extRef", metadata);
         when(messageExchangeService.getNextMessageFromInternalApplication(messageId, bpId, null, null, "extRef")).thenReturn(Optional.of(messageSearchResultWithContentDto));
 

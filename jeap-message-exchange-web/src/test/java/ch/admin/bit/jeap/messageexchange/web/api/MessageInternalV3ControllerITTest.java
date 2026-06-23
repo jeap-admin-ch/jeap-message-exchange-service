@@ -9,7 +9,6 @@ import ch.admin.bit.jeap.messageexchange.domain.malwarescan.ScanStatus;
 import ch.admin.bit.jeap.security.resource.semanticAuthentication.SemanticApplicationRole;
 import ch.admin.bit.jeap.security.resource.token.JeapAuthenticationToken;
 import ch.admin.bit.jeap.security.test.resource.JeapAuthenticationTestTokenBuilder;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.ByteArrayInputStream;
 import java.util.Base64;
@@ -119,7 +119,7 @@ class MessageInternalV3ControllerITTest {
         UUID messageId = UUID.randomUUID();
 
         Map<String, String> metadata = Map.of("myKey", "myValue", "foo", "bar");
-        String metadataBase64 = Base64.getEncoder().encodeToString(new ObjectMapper().writeValueAsString(metadata).getBytes());
+        String metadataBase64 = Base64.getEncoder().encodeToString(new JsonMapper().writeValueAsString(metadata).getBytes());
 
         mockMvc.perform(
                         put("/api/internal/v3/messages/{messageId}", messageId)
