@@ -57,6 +57,7 @@ Apache License Version 2.0
  * JMES Path Query library - [com.amazonaws:jmespath-java](https://aws.amazon.com/sdkforjava)
  * com.dynatrace.hash4j:hash4j - [com.dynatrace.hash4j:hash4j](https://github.com/dynatrace-oss/hash4j)
  * Internet Time Utility - [com.ethlo.time:itu](https://github.com/ethlo/itu)
+ * aalto-xml - [com.fasterxml:aalto-xml](https://github.com/FasterXML/aalto-xml)
  * ClassMate - [com.fasterxml:classmate](https://github.com/FasterXML/java-classmate)
  * Jackson-annotations - [com.fasterxml.jackson.core:jackson-annotations](https://github.com/FasterXML/jackson)
  * Jackson-core - [com.fasterxml.jackson.core:jackson-core](https://github.com/FasterXML/jackson-core)
@@ -221,14 +222,10 @@ Apache License Version 2.0
  * Apache HttpClient - [org.apache.httpcomponents:httpclient](http://hc.apache.org/httpcomponents-client)
  * Apache HttpCore - [org.apache.httpcomponents:httpcore](http://hc.apache.org/httpcomponents-core-ga)
  * Apache HttpClient Mime - [org.apache.httpcomponents:httpmime](http://hc.apache.org/httpcomponents-client)
-* Apache
-  HttpClient - [org.apache.httpcomponents.client5:httpclient5](https://hc.apache.org/httpcomponents-client-5.5.x/5.6.1/httpclient5/)
-* Apache HttpClient
-  Fluent - [org.apache.httpcomponents.client5:httpclient5-fluent](https://hc.apache.org/httpcomponents-client-5.5.x/5.6.1/httpclient5-fluent/)
-* Apache HttpComponents Core
-  HTTP/1.1 - [org.apache.httpcomponents.core5:httpcore5](https://hc.apache.org/httpcomponents-core-5.4.x/5.4.2/httpcore5/)
-* Apache HttpComponents Core
-  HTTP/2 - [org.apache.httpcomponents.core5:httpcore5-h2](https://hc.apache.org/httpcomponents-core-5.4.x/5.4.2/httpcore5-h2/)
+ * Apache HttpClient - [org.apache.httpcomponents.client5:httpclient5](https://hc.apache.org/httpcomponents-client-5.5.x/5.6.1/httpclient5/)
+ * Apache HttpClient Fluent - [org.apache.httpcomponents.client5:httpclient5-fluent](https://hc.apache.org/httpcomponents-client-5.5.x/5.6.1/httpclient5-fluent/)
+ * Apache HttpComponents Core HTTP/1.1 - [org.apache.httpcomponents.core5:httpcore5](https://hc.apache.org/httpcomponents-core-5.4.x/5.4.2/httpcore5/)
+ * Apache HttpComponents Core HTTP/2 - [org.apache.httpcomponents.core5:httpcore5-h2](https://hc.apache.org/httpcomponents-core-5.4.x/5.4.2/httpcore5-h2/)
  * Apache Kafka - [org.apache.kafka:kafka-clients](https://kafka.apache.org)
  * Apache Kafka - [org.apache.kafka:kafka-coordinator-common](https://kafka.apache.org)
  * Apache Kafka - [org.apache.kafka:kafka-group-coordinator](https://kafka.apache.org)
@@ -325,8 +322,7 @@ Apache License Version 2.0
  * spring-boot-opentelemetry - [org.springframework.boot:spring-boot-opentelemetry](https://spring.io/projects/spring-boot)
  * spring-boot-persistence - [org.springframework.boot:spring-boot-persistence](https://spring.io/projects/spring-boot)
  * spring-boot-restclient - [org.springframework.boot:spring-boot-restclient](https://spring.io/projects/spring-boot)
-*
-spring-boot-resttestclient - [org.springframework.boot:spring-boot-resttestclient](https://spring.io/projects/spring-boot)
+ * spring-boot-resttestclient - [org.springframework.boot:spring-boot-resttestclient](https://spring.io/projects/spring-boot)
  * spring-boot-security - [org.springframework.boot:spring-boot-security](https://spring.io/projects/spring-boot)
  * spring-boot-security-oauth2-client - [org.springframework.boot:spring-boot-security-oauth2-client](https://spring.io/projects/spring-boot)
  * spring-boot-security-oauth2-resource-server - [org.springframework.boot:spring-boot-security-oauth2-resource-server](https://spring.io/projects/spring-boot)
@@ -337,8 +333,7 @@ spring-boot-resttestclient - [org.springframework.boot:spring-boot-resttestclien
  * spring-boot-starter-aspectj - [org.springframework.boot:spring-boot-starter-aspectj](https://spring.io/projects/spring-boot)
  * spring-boot-starter-flyway - [org.springframework.boot:spring-boot-starter-flyway](https://spring.io/projects/spring-boot)
  * spring-boot-starter-jackson - [org.springframework.boot:spring-boot-starter-jackson](https://spring.io/projects/spring-boot)
-*
-spring-boot-starter-jackson-test - [org.springframework.boot:spring-boot-starter-jackson-test](https://spring.io/projects/spring-boot)
+ * spring-boot-starter-jackson-test - [org.springframework.boot:spring-boot-starter-jackson-test](https://spring.io/projects/spring-boot)
  * spring-boot-starter-jdbc - [org.springframework.boot:spring-boot-starter-jdbc](https://spring.io/projects/spring-boot)
  * spring-boot-starter-kafka - [org.springframework.boot:spring-boot-starter-kafka](https://spring.io/projects/spring-boot)
  * spring-boot-starter-logging - [org.springframework.boot:spring-boot-starter-logging](https://spring.io/projects/spring-boot)
@@ -347,15 +342,13 @@ spring-boot-starter-jackson-test - [org.springframework.boot:spring-boot-starter
  * spring-boot-starter-restclient - [org.springframework.boot:spring-boot-starter-restclient](https://spring.io/projects/spring-boot)
  * spring-boot-starter-security - [org.springframework.boot:spring-boot-starter-security](https://spring.io/projects/spring-boot)
  * spring-boot-starter-security-oauth2-client - [org.springframework.boot:spring-boot-starter-security-oauth2-client](https://spring.io/projects/spring-boot)
-*
-spring-boot-starter-security-oauth2-resource-server - [org.springframework.boot:spring-boot-starter-security-oauth2-resource-server](https://spring.io/projects/spring-boot)
+ * spring-boot-starter-security-oauth2-resource-server - [org.springframework.boot:spring-boot-starter-security-oauth2-resource-server](https://spring.io/projects/spring-boot)
  * spring-boot-starter-test - [org.springframework.boot:spring-boot-starter-test](https://spring.io/projects/spring-boot)
  * spring-boot-starter-tomcat - [org.springframework.boot:spring-boot-starter-tomcat](https://spring.io/projects/spring-boot)
  * spring-boot-starter-tomcat-runtime - [org.springframework.boot:spring-boot-starter-tomcat-runtime](https://spring.io/projects/spring-boot)
  * spring-boot-starter-validation - [org.springframework.boot:spring-boot-starter-validation](https://spring.io/projects/spring-boot)
  * spring-boot-starter-webmvc - [org.springframework.boot:spring-boot-starter-webmvc](https://spring.io/projects/spring-boot)
-*
-spring-boot-starter-webmvc-test - [org.springframework.boot:spring-boot-starter-webmvc-test](https://spring.io/projects/spring-boot)
+ * spring-boot-starter-webmvc-test - [org.springframework.boot:spring-boot-starter-webmvc-test](https://spring.io/projects/spring-boot)
  * spring-boot-test - [org.springframework.boot:spring-boot-test](https://spring.io/projects/spring-boot)
  * spring-boot-test-autoconfigure - [org.springframework.boot:spring-boot-test-autoconfigure](https://spring.io/projects/spring-boot)
  * spring-boot-testcontainers - [org.springframework.boot:spring-boot-testcontainers](https://spring.io/projects/spring-boot)
@@ -369,7 +362,7 @@ spring-boot-starter-webmvc-test - [org.springframework.boot:spring-boot-starter-
  * Spring Data Core - [org.springframework.data:spring-data-commons](https://spring.io/projects/spring-data)
  * Spring Kafka Support - [org.springframework.kafka:spring-kafka](https://github.com/spring-projects/spring-kafka)
  * Spring Kafka Test Support - [org.springframework.kafka:spring-kafka-test](https://github.com/spring-projects/spring-kafka)
-* Spring Retry - [org.springframework.retry:spring-retry](https://github.com/spring-projects/spring-retry)
+ * Spring Retry - [org.springframework.retry:spring-retry](https://github.com/spring-projects/spring-retry)
  * Spring Retry - [org.springframework.retry:spring-retry](https://github.com/spring-projects/spring-retry)
  * spring-security-config - [org.springframework.security:spring-security-config](https://spring.io/projects/spring-security)
  * spring-security-core - [org.springframework.security:spring-security-core](https://spring.io/projects/spring-security)
@@ -459,8 +452,7 @@ spring-boot-starter-webmvc-test - [org.springframework.boot:spring-boot-starter-
  * Amazon MSK Library for AWS Identity and Access Management - [software.amazon.msk:aws-msk-iam-auth](https://docs.aws.amazon.com/msk/latest/developerguide/iam-access-control.html)
  * Jackson-core - [tools.jackson.core:jackson-core](https://github.com/FasterXML/jackson-core)
  * jackson-databind - [tools.jackson.core:jackson-databind](https://github.com/FasterXML/jackson)
-*
-Jackson-dataformat-XML - [tools.jackson.dataformat:jackson-dataformat-xml](https://github.com/FasterXML/jackson-dataformat-xml)
+ * Jackson-dataformat-XML - [tools.jackson.dataformat:jackson-dataformat-xml](https://github.com/FasterXML/jackson-dataformat-xml)
  * Jackson-dataformat-YAML - [tools.jackson.dataformat:jackson-dataformat-yaml](https://github.com/FasterXML/jackson-dataformats-text)
 
 BSD 2-Clause License
@@ -546,7 +538,7 @@ GNU General Public License, version 2 (GPL2), with the classpath exception
 GNU LESSER GENERAL PUBLIC LICENSE, Version 2.1
 -------------------------------
 
-* SpotBugs Annotations - [com.github.spotbugs:spotbugs-annotations](https://spotbugs.github.io/)
+ * SpotBugs Annotations - [com.github.spotbugs:spotbugs-annotations](https://spotbugs.github.io/)
 
 GPLv2+CE
 -------------------------------
@@ -601,8 +593,7 @@ MIT License
  * Testcontainers Core - [org.testcontainers:testcontainers](https://java.testcontainers.org)
  * Testcontainers :: Database-Commons - [org.testcontainers:testcontainers-database-commons](https://java.testcontainers.org)
  * Testcontainers :: JDBC - [org.testcontainers:testcontainers-jdbc](https://java.testcontainers.org)
-* Testcontainers :: JUnit Jupiter
-  Extension - [org.testcontainers:testcontainers-junit-jupiter](https://java.testcontainers.org)
+ * Testcontainers :: JUnit Jupiter Extension - [org.testcontainers:testcontainers-junit-jupiter](https://java.testcontainers.org)
  * Testcontainers :: Localstack - [org.testcontainers:testcontainers-localstack](https://java.testcontainers.org)
  * Testcontainers :: JDBC :: PostgreSQL - [org.testcontainers:testcontainers-postgresql](https://java.testcontainers.org)
  * webjars-locator-lite - [org.webjars:webjars-locator-lite](https://webjars.org)
