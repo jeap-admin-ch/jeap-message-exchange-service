@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.2.0] - 2026-06-29
+
+### Dependencies
+- **ch.admin.bit.jeap:jeap-spring-boot-parent**: 35.11.0 → 35.11.1 (patch)
+- **com.networknt:json-schema-validator**: 3.0.3 → 3.0.5 (patch)
+- **com.fasterxml:aalto-xml**: 1.3.3 → 1.4.0 (minor)
+
 ## [9.1.0] - 2026-06-23
 
 ### Changed
