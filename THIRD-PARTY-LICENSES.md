@@ -618,6 +618,7 @@ The BSD 2-Clause License
 -------------------------------
 
  * Stax2 API - [org.codehaus.woodstox:stax2-api](http://github.com/FasterXML/stax2-api)
+ * Stax2 API - [org.codehaus.woodstox:stax2-api](http://github.com/FasterXML/stax2-api)
 
 WTFPL
 -------------------------------
