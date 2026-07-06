@@ -374,7 +374,6 @@ Apache License Version 2.0
  * spring-security-test - [org.springframework.security:spring-security-test](https://spring.io/projects/spring-security)
  * spring-security-web - [org.springframework.security:spring-security-web](https://spring.io/projects/spring-security)
  * Swagger UI - [org.webjars:swagger-ui](https://www.webjars.org)
- * WireMock - [org.wiremock:wiremock-standalone](http://wiremock.org)
  * snappy-java - [org.xerial.snappy:snappy-java](https://github.com/xerial/snappy-java)
  * org.xmlunit:xmlunit-core - [org.xmlunit:xmlunit-core](https://www.xmlunit.org/)
  * SnakeYAML - [org.yaml:snakeyaml](https://bitbucket.org/snakeyaml/snakeyaml)
