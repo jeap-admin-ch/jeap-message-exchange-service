@@ -54,10 +54,7 @@ public class ObjectStorageConfiguration {
 
     @Bean
     public S3LifecycleConfigurationFactory s3LifecycleConfigurationFactory() {
-        // Storage expiration is always one day after DB expiration to make sure no inconsistencies occur when
-        // messages are deleted from the storage but not yet from the DB
-        int s3ExpirationDays = housekeepingProperties.getExpirationDays() + 1;
-        return new S3LifecycleConfigurationFactory(MESSAGE_EXCHANGE_LIFECYCLE_POLICY, s3ExpirationDays);
+        return new S3LifecycleConfigurationFactory(MESSAGE_EXCHANGE_LIFECYCLE_POLICY, housekeepingProperties.getS3ExpirationDays());
     }
 
     @Bean

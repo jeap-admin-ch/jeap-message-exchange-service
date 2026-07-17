@@ -16,4 +16,20 @@ public class HousekeepingProperties {
      * for example if deploying to an existing or test environment where you don't want to delete data.
      */
     private boolean enabled = true;
+
+    /**
+     * S3 objects expire one day after the DB expiration to make sure no inconsistencies occur when messages are
+     * deleted from the storage but not yet from the DB.
+     */
+    public int getS3ExpirationDays() {
+        return expirationDays + 1;
+    }
+
+    /**
+     * Inbound message rows must outlive the corresponding S3 objects: the row is the sole source of the malware
+     * scan status - without it, a still-existing S3 object without a scanStatus tag could be delivered unchecked.
+     */
+    public int getInboundMessageRetentionDays() {
+        return getS3ExpirationDays() + 1;
+    }
 }

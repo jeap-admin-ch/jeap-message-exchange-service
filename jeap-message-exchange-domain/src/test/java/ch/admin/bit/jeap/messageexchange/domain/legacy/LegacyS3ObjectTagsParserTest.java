@@ -1,4 +1,4 @@
-package ch.admin.bit.jeap.messageexchange.domain.objectstore;
+package ch.admin.bit.jeap.messageexchange.domain.legacy;
 
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.ScanStatus;
 import org.junit.jupiter.api.Test;
@@ -6,50 +6,14 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 
-class S3ObjectTagsServiceTest {
-
-    @Test
-    void testToMap_required() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
-        Map<String, String> tags = helper.toMap("bpId123", "messageTypeABC", null, null, ScanStatus.NO_THREATS_FOUND, 123456789L);
-
-        assertEquals("bpId123", tags.get("bpId"));
-        assertEquals("messageTypeABC", tags.get("messageType"));
-        assertEquals("NO_THREATS_FOUND", tags.get("scanStatus"));
-        assertEquals("123456789", tags.get("saveTimeInMillis"));
-        assertNull(tags.get("partnerTopic"));
-        assertNull(tags.get("partnerExternalReference"));
-    }
-
-    @Test
-    void testToMap_full() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
-        Map<String, String> tags = helper.toMap("bpId123", "messageTypeABC", "partnerTopic1", "partnerExternalReferenceTest", ScanStatus.NO_THREATS_FOUND, 123456789L);
-
-        assertEquals("bpId123", tags.get("bpId"));
-        assertEquals("messageTypeABC", tags.get("messageType"));
-        assertEquals("NO_THREATS_FOUND", tags.get("scanStatus"));
-        assertEquals("123456789", tags.get("saveTimeInMillis"));
-        assertEquals("partnerTopic1", tags.get("partnerTopic"));
-        assertEquals("partnerExternalReferenceTest", tags.get("partnerExternalReference"));
-    }
-
-    @Test
-    void testToMapWithScanStatus() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
-        Map<String, String> tags = helper.toMap(ScanStatus.THREATS_FOUND);
-
-        assertEquals("THREATS_FOUND", tags.get("scanStatus"));
-    }
+class LegacyS3ObjectTagsParserTest {
 
     @Test
     void testGetTagsFromMap_required() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
+        LegacyS3ObjectTagsParser parser = new LegacyS3ObjectTagsParser();
         Map<String, String> tags = Map.of(
                 "bpId", "bpId123",
                 "messageType", "messageTypeABC",
@@ -57,7 +21,7 @@ class S3ObjectTagsServiceTest {
                 "saveTimeInMillis", "123456789"
         );
 
-        S3ObjectTags s3ObjectTags = helper.getTagsfromMap(tags);
+        S3ObjectTags s3ObjectTags = parser.getTagsfromMap(tags);
 
         assertEquals("bpId123", s3ObjectTags.bpId());
         assertEquals("messageTypeABC", s3ObjectTags.messageType());
@@ -67,7 +31,7 @@ class S3ObjectTagsServiceTest {
 
     @Test
     void testGetTagsFromMap_full() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
+        LegacyS3ObjectTagsParser parser = new LegacyS3ObjectTagsParser();
         Map<String, String> tags = Map.of(
                 "bpId", "bpId123",
                 "messageType", "messageTypeABC",
@@ -77,7 +41,7 @@ class S3ObjectTagsServiceTest {
                 "saveTimeInMillis", "123456789"
         );
 
-        S3ObjectTags s3ObjectTags = helper.getTagsfromMap(tags);
+        S3ObjectTags s3ObjectTags = parser.getTagsfromMap(tags);
 
         assertEquals("bpId123", s3ObjectTags.bpId());
         assertEquals("messageTypeABC", s3ObjectTags.messageType());
@@ -89,10 +53,10 @@ class S3ObjectTagsServiceTest {
 
     @Test
     void testGetTagsFromMap_withEmptyMap() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
+        LegacyS3ObjectTagsParser parser = new LegacyS3ObjectTagsParser();
         Map<String, String> tags = Collections.emptyMap();
 
-        S3ObjectTags s3ObjectTags = helper.getTagsfromMap(tags);
+        S3ObjectTags s3ObjectTags = parser.getTagsfromMap(tags);
 
         assertNull(s3ObjectTags.bpId());
         assertNull(s3ObjectTags.messageType());
@@ -104,7 +68,7 @@ class S3ObjectTagsServiceTest {
 
     @Test
     void testGetTagsFromMapAndValidate() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
+        LegacyS3ObjectTagsParser parser = new LegacyS3ObjectTagsParser();
         Map<String, String> tags = Map.of(
                 "bpId", "bpId123",
                 "messageType", "messageTypeABC",
@@ -112,7 +76,7 @@ class S3ObjectTagsServiceTest {
                 "saveTimeInMillis", "123456789"
         );
 
-        S3ObjectTags s3ObjectTags = helper.getTagsfromMapAndValidate("my-bucket", "1234", tags);
+        S3ObjectTags s3ObjectTags = parser.getTagsfromMapAndValidate("my-bucket", "1234", tags);
 
         assertEquals("bpId123", s3ObjectTags.bpId());
         assertEquals("messageTypeABC", s3ObjectTags.messageType());
@@ -122,45 +86,45 @@ class S3ObjectTagsServiceTest {
 
     @Test
     void testGetTagsFromMapAndValidate_withEmptyMap() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
+        LegacyS3ObjectTagsParser parser = new LegacyS3ObjectTagsParser();
         Map<String, String> tags = Collections.emptyMap();
 
-        assertThrows(IllegalStateException.class, () -> helper.getTagsfromMapAndValidate("my-bucket", "1234", tags));
+        assertThrows(IllegalStateException.class, () -> parser.getTagsfromMapAndValidate("my-bucket", "1234", tags));
     }
 
     @Test
     void testGetTagsFromMapAndValidate_withBpIdNotSet() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
+        LegacyS3ObjectTagsParser parser = new LegacyS3ObjectTagsParser();
         Map<String, String> tags = Map.of(
                 "messageType", "messageTypeABC",
                 "scanStatus", "NO_THREATS_FOUND",
                 "saveTimeInMillis", "123456789"
         );
 
-        assertThrows(IllegalStateException.class, () -> helper.getTagsfromMapAndValidate("my-bucket", "1234", tags));
+        assertThrows(IllegalStateException.class, () -> parser.getTagsfromMapAndValidate("my-bucket", "1234", tags));
     }
 
     @Test
     void testGetTagsFromMapAndValidate_withMessageTypeNotSet() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
+        LegacyS3ObjectTagsParser parser = new LegacyS3ObjectTagsParser();
         Map<String, String> tags = Map.of(
                 "bpId", "bpId123",
                 "scanStatus", "NO_THREATS_FOUND",
                 "saveTimeInMillis", "123456789"
         );
 
-        assertThrows(IllegalStateException.class, () -> helper.getTagsfromMapAndValidate("my-bucket", "1234", tags));
+        assertThrows(IllegalStateException.class, () -> parser.getTagsfromMapAndValidate("my-bucket", "1234", tags));
     }
 
     @Test
     void testGetTagsFromMapAndValidate_withScanStatusNotSet() {
-        S3ObjectTagsService helper = new S3ObjectTagsService();
+        LegacyS3ObjectTagsParser parser = new LegacyS3ObjectTagsParser();
         Map<String, String> tags = Map.of(
                 "bpId", "bpId123",
                 "messageType", "messageTypeABC",
                 "saveTimeInMillis", "123456789"
         );
 
-        assertThrows(IllegalStateException.class, () -> helper.getTagsfromMapAndValidate("my-bucket", "1234", tags));
+        assertThrows(IllegalStateException.class, () -> parser.getTagsfromMapAndValidate("my-bucket", "1234", tags));
     }
 }

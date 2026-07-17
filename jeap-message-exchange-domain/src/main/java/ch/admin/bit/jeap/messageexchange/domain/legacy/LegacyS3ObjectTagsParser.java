@@ -1,46 +1,25 @@
-package ch.admin.bit.jeap.messageexchange.domain.objectstore;
+package ch.admin.bit.jeap.messageexchange.domain.legacy;
 
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.ScanStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Parses the message metadata tags written to S3 objects by MES &lt; 11.0.0.
+ * LEGACY-TAG-FALLBACK: remove with the contract story (JEAP-7252).
+ */
 @Service
 @Slf4j
-public class S3ObjectTagsService {
+public class LegacyS3ObjectTagsParser {
 
-    private static final String TAG_KEY_BP_ID = "bpId";
-    private static final String TAG_KEY_MESSAGE_TYPE = "messageType";
-    private static final String TAG_KEY_PARTNER_TOPIC = "partnerTopic";
-    private static final String TAG_KEY_PARTNER_EXTERNAL_REFERENCE = "partnerExternalReference";
-    private static final String TAG_KEY_SCAN_STATUS = "scanStatus";
-    private static final String TAG_KEY_SAVE_TIME_IN_MILLIS = "saveTimeInMillis";
-
-    public Map<String, String> toMap(String bpId, String messageType, String partnerTopic, String partnerExternalReference, ScanStatus scanStatus, long saveTimeInMillis) {
-        Map<String, String> tags = new HashMap<>();
-        tags.put(TAG_KEY_BP_ID, bpId);
-        tags.put(TAG_KEY_MESSAGE_TYPE, messageType);
-        tags.put(TAG_KEY_SCAN_STATUS, scanStatus.name());
-        tags.put(TAG_KEY_SAVE_TIME_IN_MILLIS, String.valueOf(saveTimeInMillis));
-
-        if (StringUtils.hasText(partnerTopic)) {
-            tags.put(TAG_KEY_PARTNER_TOPIC, partnerTopic);
-        }
-        if (StringUtils.hasText(partnerExternalReference)) {
-            tags.put(TAG_KEY_PARTNER_EXTERNAL_REFERENCE, partnerExternalReference);
-        }
-
-        return tags;
-    }
-
-    public Map<String, String> toMap(ScanStatus scanStatus) {
-        return Map.of(
-                TAG_KEY_SCAN_STATUS, scanStatus.name()
-        );
-    }
+    static final String TAG_KEY_BP_ID = "bpId";
+    static final String TAG_KEY_MESSAGE_TYPE = "messageType";
+    static final String TAG_KEY_PARTNER_TOPIC = "partnerTopic";
+    static final String TAG_KEY_PARTNER_EXTERNAL_REFERENCE = "partnerExternalReference";
+    static final String TAG_KEY_SCAN_STATUS = "scanStatus";
+    static final String TAG_KEY_SAVE_TIME_IN_MILLIS = "saveTimeInMillis";
 
     public S3ObjectTags getTagsfromMapAndValidate(String bucketName, String objectKey, Map<String, String> tags) {
         return getTagsfromMap(tags, (bpId, messageType, scanStatusString) -> {

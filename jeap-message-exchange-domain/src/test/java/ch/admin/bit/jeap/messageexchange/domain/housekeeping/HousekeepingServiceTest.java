@@ -27,7 +27,7 @@ class HousekeepingServiceTest {
                 // first invocation returns true, second invocation returns false, meaning no more messages to delete
                 .thenReturn(true, false);
 
-        when(inboundMessageRepository.deleteExpiredMessages(props.getExpirationDays(), props.getBatchSize()))
+        when(inboundMessageRepository.deleteExpiredMessages(props.getInboundMessageRetentionDays(), props.getBatchSize()))
                 // first invocation returns true, second invocation returns false, meaning no more messages to delete
                 .thenReturn(true, false);
 
@@ -36,7 +36,7 @@ class HousekeepingServiceTest {
         verify(messageRepository, times(2)).deleteExpiredMessages(props.getExpirationDays(), props.getBatchSize());
         verifyNoMoreInteractions(messageRepository);
 
-        verify(inboundMessageRepository, times(2)).deleteExpiredMessages(props.getExpirationDays(), props.getBatchSize());
+        verify(inboundMessageRepository, times(2)).deleteExpiredMessages(props.getInboundMessageRetentionDays(), props.getBatchSize());
         verifyNoMoreInteractions(inboundMessageRepository);
     }
 
@@ -47,14 +47,14 @@ class HousekeepingServiceTest {
         HousekeepingService housekeepingService = new HousekeepingService(messageRepository, inboundMessageRepository, props);
 
         when(messageRepository.deleteExpiredMessages(props.getExpirationDays(), props.getBatchSize())).thenReturn(true);
-        when(inboundMessageRepository.deleteExpiredMessages(props.getExpirationDays(), props.getBatchSize())).thenReturn(true);
+        when(inboundMessageRepository.deleteExpiredMessages(props.getInboundMessageRetentionDays(), props.getBatchSize())).thenReturn(true);
 
         housekeepingService.cleanupExpiredPersistentMessages();
 
         verify(messageRepository, times(2)).deleteExpiredMessages(props.getExpirationDays(), props.getBatchSize());
         verifyNoMoreInteractions(messageRepository);
 
-        verify(inboundMessageRepository, times(2)).deleteExpiredMessages(props.getExpirationDays(), props.getBatchSize());
+        verify(inboundMessageRepository, times(2)).deleteExpiredMessages(props.getInboundMessageRetentionDays(), props.getBatchSize());
         verifyNoMoreInteractions(inboundMessageRepository);
     }
 

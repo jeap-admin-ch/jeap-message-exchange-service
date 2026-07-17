@@ -1,6 +1,7 @@
 package ch.admin.bit.jeap.messageexchange.persistence;
 
 import ch.admin.bit.jeap.messageexchange.domain.InboundMessage;
+import ch.admin.bit.jeap.messageexchange.domain.malwarescan.ScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.messaging.EventPublisher;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
 import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
@@ -75,7 +76,7 @@ class JdbcInboundMessageRepositoryITTest {
     }
 
     @Test
-    void saveAndGetMessage() {
+    void upsertAndGetMessage() {
         UUID messageId = UUID.randomUUID();
 
         InboundMessage message = InboundMessage.builder()
@@ -85,7 +86,7 @@ class JdbcInboundMessageRepositoryITTest {
                 .build();
         assertThat(message).isNotNull();
 
-        inboundMessageRepository.save(message);
+        inboundMessageRepository.upsertScanStatusAndMetadata(message);
 
         Optional<InboundMessage> result = inboundMessageRepository.findByBpIdAndMessageId("myBpId", messageId);
         assertThat(result).isPresent();
@@ -106,7 +107,7 @@ class JdbcInboundMessageRepositoryITTest {
                 .build();
         assertThat(message2).isNotNull();
 
-        inboundMessageRepository.save(message2);
+        inboundMessageRepository.upsertScanStatusAndMetadata(message2);
 
         result = inboundMessageRepository.findByBpIdAndMessageId("myBpId2", messageId);
         assertThat(result).isPresent();
@@ -119,7 +120,7 @@ class JdbcInboundMessageRepositoryITTest {
     }
 
     @Test
-    void saveMessage_sameBpIdAndMessageId_ignoreDuplicateException() {
+    void upsertMessage_sameMessageIdDifferentBpId_bothRowsSaved() {
         UUID messageId = UUID.randomUUID();
 
         InboundMessage message = InboundMessage.builder()
@@ -129,25 +130,7 @@ class JdbcInboundMessageRepositoryITTest {
                 .build();
         assertThat(message).isNotNull();
 
-        // message is saved
-        inboundMessageRepository.save(message);
-
-        // duplicate exception is ignored
-        inboundMessageRepository.save(message);
-    }
-
-    @Test
-    void saveMessage_sameMessageId_messagesSaved() {
-        UUID messageId = UUID.randomUUID();
-
-        InboundMessage message = InboundMessage.builder()
-                .messageId(messageId)
-                .bpId("bpId")
-                .contentLength(123)
-                .build();
-        assertThat(message).isNotNull();
-
-        inboundMessageRepository.save(message);
+        inboundMessageRepository.upsertScanStatusAndMetadata(message);
 
         InboundMessage message2 = InboundMessage.builder()
                 .messageId(messageId)
@@ -156,7 +139,7 @@ class JdbcInboundMessageRepositoryITTest {
                 .build();
         assertThat(message2).isNotNull();
 
-        inboundMessageRepository.save(message2);
+        inboundMessageRepository.upsertScanStatusAndMetadata(message2);
     }
 
 
@@ -217,13 +200,263 @@ class JdbcInboundMessageRepositoryITTest {
         assertThat(message).isPresent();
     }
 
+    @Test
+    void upsertAndGetMessage_withScanMetadata_allFieldsRoundTrip() {
+        UUID messageId = UUID.randomUUID();
+
+        InboundMessage message = InboundMessage.builder()
+                .messageId(messageId)
+                .bpId("myBpId")
+                .contentLength(100)
+                .messageType("NI015")
+                .partnerTopic("aPartnerTopic")
+                .partnerExternalReference("anExternalReference")
+                .contentType("application/xml")
+                .scanStatus(ScanStatus.SCAN_PENDING)
+                .build();
+
+        inboundMessageRepository.upsertScanStatusAndMetadata(message);
+
+        Optional<InboundMessage> result = inboundMessageRepository.findByBpIdAndMessageId("myBpId", messageId);
+        assertThat(result).isPresent();
+        InboundMessage savedMessage = result.get();
+        assertEquals("NI015", savedMessage.getMessageType());
+        assertEquals("aPartnerTopic", savedMessage.getPartnerTopic());
+        assertEquals("anExternalReference", savedMessage.getPartnerExternalReference());
+        assertEquals("application/xml", savedMessage.getContentType());
+        assertEquals(ScanStatus.SCAN_PENDING, savedMessage.getScanStatus());
+    }
+
+    @Test
+    void findLatestByMessageId_messageNotFound_returnsEmpty() {
+        assertThat(inboundMessageRepository.findLatestByMessageId(UUID.randomUUID())).isEmpty();
+    }
+
+    @Test
+    void updateScanStatusReturningPreviousState_returnsPreviousStatusAndCurrentMetadata() {
+        UUID messageId = UUID.randomUUID();
+        inboundMessageRepository.upsertScanStatusAndMetadata(inboundMessage(messageId, "myBpId", ScanStatus.SCAN_PENDING));
+
+        Optional<InboundMessage> previousState = inboundMessageRepository.updateScanStatusReturningPreviousState(messageId, ScanStatus.NO_THREATS_FOUND);
+
+        assertThat(previousState).isPresent();
+        // the returned state carries the PREVIOUS scan status but the current metadata
+        assertThat(previousState.get().getScanStatus()).isEqualTo(ScanStatus.SCAN_PENDING);
+        assertThat(previousState.get().getBpId()).isEqualTo("myBpId");
+        assertThat(previousState.get().getMessageType()).isEqualTo("NI015");
+        assertThat(previousState.get().getContentType()).isEqualTo("application/xml");
+
+        Optional<InboundMessage> updated = inboundMessageRepository.findLatestByMessageId(messageId);
+        assertThat(updated).isPresent();
+        assertThat(updated.get().getScanStatus()).isEqualTo(ScanStatus.NO_THREATS_FOUND);
+    }
+
+    @Test
+    void updateScanStatusReturningPreviousState_legacyRowWithoutScanStatus_returnsNullPreviousStatus() {
+        // simulates a row created by MES < 11.0.0 (no metadata / scan status columns)
+        UUID messageId = UUID.randomUUID();
+        InboundMessage legacyRow = InboundMessage.builder()
+                .messageId(messageId)
+                .bpId("myBpId")
+                .contentLength(100)
+                .build();
+        inboundMessageRepository.upsertScanStatusAndMetadata(legacyRow);
+
+        Optional<InboundMessage> previousState = inboundMessageRepository.updateScanStatusReturningPreviousState(messageId, ScanStatus.NO_THREATS_FOUND);
+
+        assertThat(previousState).isPresent();
+        assertThat(previousState.get().getScanStatus()).isNull();
+        assertThat(previousState.get().getMessageType()).isNull();
+
+        assertThat(inboundMessageRepository.findLatestByMessageId(messageId).orElseThrow().getScanStatus())
+                .isEqualTo(ScanStatus.NO_THREATS_FOUND);
+    }
+
+    @Test
+    void updateScanStatusReturningPreviousState_noRow_returnsEmpty() {
+        Optional<InboundMessage> previousState = inboundMessageRepository.updateScanStatusReturningPreviousState(UUID.randomUUID(), ScanStatus.NO_THREATS_FOUND);
+
+        assertThat(previousState).isEmpty();
+    }
+
+    @Test
+    void updateScanStatusIfPending_pendingRow_updatesStatus() {
+        UUID messageId = UUID.randomUUID();
+        inboundMessageRepository.upsertScanStatusAndMetadata(inboundMessage(messageId, "myBpId", ScanStatus.SCAN_PENDING));
+
+        assertThat(inboundMessageRepository.updateScanStatusIfPending(messageId, ScanStatus.NO_THREATS_FOUND)).isTrue();
+
+        assertThat(inboundMessageRepository.findLatestByMessageId(messageId).orElseThrow().getScanStatus())
+                .isEqualTo(ScanStatus.NO_THREATS_FOUND);
+    }
+
+    @Test
+    void updateScanStatusIfPending_legacyRowWithoutStatus_updatesStatus() {
+        UUID messageId = UUID.randomUUID();
+        inboundMessageRepository.upsertScanStatusAndMetadata(InboundMessage.builder()
+                .messageId(messageId)
+                .bpId("myBpId")
+                .contentLength(100)
+                .build());
+
+        assertThat(inboundMessageRepository.updateScanStatusIfPending(messageId, ScanStatus.THREATS_FOUND)).isTrue();
+
+        assertThat(inboundMessageRepository.findLatestByMessageId(messageId).orElseThrow().getScanStatus())
+                .isEqualTo(ScanStatus.THREATS_FOUND);
+    }
+
+    @Test
+    void updateScanStatusIfPending_terminalRow_doesNotChangeStatus() {
+        UUID messageId = UUID.randomUUID();
+        inboundMessageRepository.upsertScanStatusAndMetadata(inboundMessage(messageId, "myBpId", ScanStatus.THREATS_FOUND));
+
+        assertThat(inboundMessageRepository.updateScanStatusIfPending(messageId, ScanStatus.NO_THREATS_FOUND)).isFalse();
+
+        assertThat(inboundMessageRepository.findLatestByMessageId(messageId).orElseThrow().getScanStatus())
+                .isEqualTo(ScanStatus.THREATS_FOUND);
+    }
+
+    @Test
+    void updateScanStatusIfPending_noRow_returnsFalse() {
+        assertThat(inboundMessageRepository.updateScanStatusIfPending(UUID.randomUUID(), ScanStatus.NO_THREATS_FOUND)).isFalse();
+    }
+
+    @Test
+    void upsertScanStatusAndMetadata_insertsWhenNoRowExists() {
+        UUID messageId = UUID.randomUUID();
+
+        inboundMessageRepository.upsertScanStatusAndMetadata(inboundMessage(messageId, "myBpId", ScanStatus.NO_THREATS_FOUND));
+
+        Optional<InboundMessage> result = inboundMessageRepository.findLatestByMessageId(messageId);
+        assertThat(result).isPresent();
+        assertThat(result.get().getScanStatus()).isEqualTo(ScanStatus.NO_THREATS_FOUND);
+        assertThat(result.get().getMessageType()).isEqualTo("NI015");
+    }
+
+    @Test
+    void upsertScanStatusAndMetadata_onConflictUpdatesAllFieldsIncludingCreatedAt() {
+        UUID messageId = UUID.randomUUID();
+        LocalDateTime originalCreatedAt = LocalDateTime.of(2020, 1, 1, 13, 45);
+        InboundMessage legacyRow = InboundMessage.builder()
+                .messageId(messageId)
+                .bpId("myBpId")
+                .contentLength(100)
+                .overrideCreatedAt(originalCreatedAt)
+                .build();
+        inboundMessageRepository.upsertScanStatusAndMetadata(legacyRow);
+
+        LocalDateTime newCreatedAt = LocalDateTime.of(2026, 7, 8, 13, 45);
+        InboundMessage update = InboundMessage.builder()
+                .messageId(messageId)
+                .bpId("myBpId")
+                .contentLength(999)
+                .overrideCreatedAt(newCreatedAt)
+                .messageType("NI015")
+                .contentType("application/xml")
+                .scanStatus(ScanStatus.NO_THREATS_FOUND)
+                .build();
+        inboundMessageRepository.upsertScanStatusAndMetadata(update);
+
+        Optional<InboundMessage> result = inboundMessageRepository.findByBpIdAndMessageId("myBpId", messageId);
+        assertThat(result).isPresent();
+        assertThat(result.get().getScanStatus()).isEqualTo(ScanStatus.NO_THREATS_FOUND);
+        assertThat(result.get().getMessageType()).isEqualTo("NI015");
+        assertThat(result.get().getContentType()).isEqualTo("application/xml");
+        // createdAt and contentLength are updated too, keeping housekeeping retention aligned with the
+        // S3 object lifetime when a message is stored again
+        assertThat(result.get().getCreatedAt()).isEqualTo(newCreatedAt);
+        assertThat(result.get().getContentLength()).isEqualTo(999);
+    }
+
+    @Test
+    void upsertScanStatusAndMetadataKeepingTerminalStatus_insertsWhenNoRowExists() {
+        UUID messageId = UUID.randomUUID();
+
+        inboundMessageRepository.upsertScanStatusAndMetadataKeepingTerminalStatus(inboundMessage(messageId, "myBpId", ScanStatus.SCAN_PENDING));
+
+        Optional<InboundMessage> result = inboundMessageRepository.findLatestByMessageId(messageId);
+        assertThat(result).isPresent();
+        assertThat(result.get().getScanStatus()).isEqualTo(ScanStatus.SCAN_PENDING);
+        assertThat(result.get().getMessageType()).isEqualTo("NI015");
+    }
+
+    @Test
+    void upsertScanStatusAndMetadataKeepingTerminalStatus_terminalRow_keepsVerdictAndUpdatesMetadata() {
+        // the scan result of the just-stored object was processed (and backfilled by the legacy tag fallback)
+        // before the upload's upsert - the verdict must not be reverted to SCAN_PENDING
+        for (ScanStatus terminalStatus : ScanStatus.values()) {
+            if (!terminalStatus.isTerminal()) {
+                continue;
+            }
+            UUID messageId = UUID.randomUUID();
+            inboundMessageRepository.upsertScanStatusAndMetadata(InboundMessage.builder()
+                    .messageId(messageId)
+                    .bpId("myBpId")
+                    .contentLength(100)
+                    .scanStatus(terminalStatus)
+                    .build());
+
+            LocalDateTime newCreatedAt = LocalDateTime.of(2026, 7, 8, 13, 45);
+            inboundMessageRepository.upsertScanStatusAndMetadataKeepingTerminalStatus(inboundMessage(messageId, "myBpId", ScanStatus.SCAN_PENDING, newCreatedAt));
+
+            InboundMessage result = inboundMessageRepository.findByBpIdAndMessageId("myBpId", messageId).orElseThrow();
+            assertThat(result.getScanStatus()).as("terminal status %s must be kept", terminalStatus).isEqualTo(terminalStatus);
+            assertThat(result.getMessageType()).isEqualTo("NI015");
+            assertThat(result.getCreatedAt()).isEqualTo(newCreatedAt);
+        }
+    }
+
+    @Test
+    void upsertScanStatusAndMetadataKeepingTerminalStatus_pendingRow_overwritesScanStatus() {
+        UUID messageId = UUID.randomUUID();
+        inboundMessageRepository.upsertScanStatusAndMetadata(inboundMessage(messageId, "myBpId", ScanStatus.SCAN_PENDING));
+
+        inboundMessageRepository.upsertScanStatusAndMetadataKeepingTerminalStatus(inboundMessage(messageId, "myBpId", ScanStatus.NOT_SCANNED));
+
+        assertThat(inboundMessageRepository.findByBpIdAndMessageId("myBpId", messageId).orElseThrow().getScanStatus())
+                .isEqualTo(ScanStatus.NOT_SCANNED);
+    }
+
+    @Test
+    void upsertScanStatusAndMetadataKeepingTerminalStatus_rowWithoutScanStatus_overwritesScanStatus() {
+        UUID messageId = UUID.randomUUID();
+        inboundMessageRepository.upsertScanStatusAndMetadata(InboundMessage.builder()
+                .messageId(messageId)
+                .bpId("myBpId")
+                .contentLength(100)
+                .build());
+
+        inboundMessageRepository.upsertScanStatusAndMetadataKeepingTerminalStatus(inboundMessage(messageId, "myBpId", ScanStatus.SCAN_PENDING));
+
+        assertThat(inboundMessageRepository.findByBpIdAndMessageId("myBpId", messageId).orElseThrow().getScanStatus())
+                .isEqualTo(ScanStatus.SCAN_PENDING);
+    }
+
+    private InboundMessage inboundMessage(UUID messageId, String bpId, ScanStatus scanStatus) {
+        return inboundMessage(messageId, bpId, scanStatus, null);
+    }
+
+    private InboundMessage inboundMessage(UUID messageId, String bpId, ScanStatus scanStatus, LocalDateTime createdAt) {
+        return InboundMessage.builder()
+                .messageId(messageId)
+                .bpId(bpId)
+                .contentLength(100)
+                .overrideCreatedAt(createdAt)
+                .messageType("NI015")
+                .partnerTopic("aPartnerTopic")
+                .partnerExternalReference("anExternalReference")
+                .contentType("application/xml")
+                .scanStatus(scanStatus)
+                .build();
+    }
+
     private InboundMessage storeMessageInDb(String bpId, int contentLength) {
         InboundMessage message = InboundMessage.builder()
                 .messageId(UUID.randomUUID())
                 .bpId(bpId)
                 .contentLength(contentLength)
                 .build();
-        inboundMessageRepository.save(message);
+        inboundMessageRepository.upsertScanStatusAndMetadata(message);
         return message;
     }
 
@@ -234,7 +467,7 @@ class JdbcInboundMessageRepositoryITTest {
                 .contentLength(123)
                 .overrideCreatedAt(createdAt)
                 .build();
-        inboundMessageRepository.save(message);
+        inboundMessageRepository.upsertScanStatusAndMetadata(message);
         return message;
     }
 

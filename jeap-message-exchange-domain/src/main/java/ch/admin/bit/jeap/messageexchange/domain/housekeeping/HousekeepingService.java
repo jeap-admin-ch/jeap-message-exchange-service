@@ -40,7 +40,7 @@ public class HousekeepingService {
         }
 
         for (int i = 0; i < props.getMaxBatches(); i++) {
-            boolean deletedExpiredMessages = inboundMessageRepository.deleteExpiredMessages(props.getExpirationDays(), props.getBatchSize());
+            boolean deletedExpiredMessages = inboundMessageRepository.deleteExpiredMessages(props.getInboundMessageRetentionDays(), props.getBatchSize());
             if (!deletedExpiredMessages) {
                 log.info("Deleted expired inbound messages in {} batches", i);
                 break;

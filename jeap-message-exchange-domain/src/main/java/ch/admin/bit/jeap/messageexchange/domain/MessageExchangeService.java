@@ -7,13 +7,19 @@ import ch.admin.bit.jeap.messageexchange.domain.dto.MessageSearchResultWithConte
 import ch.admin.bit.jeap.messageexchange.domain.exception.MalwareScanFailedOrBlockedException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentException;
 import ch.admin.bit.jeap.messageexchange.domain.exception.MismatchedContentTypeException;
+import ch.admin.bit.jeap.messageexchange.domain.legacy.LegacyS3ObjectTagsFactory;
+import ch.admin.bit.jeap.messageexchange.domain.legacy.LegacyS3ObjectTagsParser;
+import ch.admin.bit.jeap.messageexchange.domain.legacy.LegacyS3TagFallbackService;
+import ch.admin.bit.jeap.messageexchange.domain.legacy.LegacyS3TagFallbackService.LegacyScanResultData;
+import ch.admin.bit.jeap.messageexchange.domain.legacy.S3ObjectTags;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.PublishedScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.S3ObjectMalwareScanResultInfo;
 import ch.admin.bit.jeap.messageexchange.domain.malwarescan.ScanStatus;
 import ch.admin.bit.jeap.messageexchange.domain.messaging.EventPublisher;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
-import ch.admin.bit.jeap.messageexchange.domain.objectstore.*;
+import ch.admin.bit.jeap.messageexchange.domain.objectstore.BucketType;
+import ch.admin.bit.jeap.messageexchange.domain.objectstore.ObjectStore;
 import ch.admin.bit.jeap.messageexchange.domain.sent.MessageSentProperties;
 import ch.admin.bit.jeap.messageexchange.domain.xml.XmlValidatingOutputStream;
 import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanResult;
@@ -22,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,7 +52,9 @@ public class MessageExchangeService {
     private final MalwareScanProperties malwareScanProperties;
     private final MessageSentProperties messageSentProperties;
     private final MetricsService metricsService;
-    private final S3ObjectTagsService tagsService;
+    private final LegacyS3ObjectTagsParser legacyTagsParser;
+    private final LegacyS3TagFallbackService legacyTagFallbackService;
+    private final LegacyS3ObjectTagsFactory legacyTagsFactory;
     private final Optional<MalwareScanTrigger> malwareScanTriggerOptional;
 
     public Optional<MessageContent> getMessageContentFromInternalApplication(String bpId, UUID messageId) {
@@ -132,9 +141,42 @@ public class MessageExchangeService {
 
     public Optional<MessageContent> getMessageFromPartner(UUID messageId, String requestedContentType) throws MismatchedContentTypeException {
         log.trace("Retrieve payload for partner message with messageId {} and requestedContentType {}", messageId, requestedContentType);
+        Optional<InboundMessage> inboundMessageOptional = inboundMessageRepository.findLatestByMessageId(messageId);
+        if (inboundMessageOptional.isPresent() && inboundMessageOptional.get().getScanStatus() != null) {
+            return getMessageFromPartnerWithDatabaseScanStatus(messageId, requestedContentType, inboundMessageOptional.get());
+        }
+        // LEGACY-TAG-FALLBACK: message stored by MES < 11.0.0, its scan status is only available as S3 object
+        // tag - remove with the contract story (JEAP-7252)
+        return getMessageFromPartnerWithLegacyTags(messageId, requestedContentType);
+    }
+
+    private Optional<MessageContent> getMessageFromPartnerWithDatabaseScanStatus(UUID messageId, String requestedContentType, InboundMessage inboundMessage) throws MismatchedContentTypeException {
+        if (requestedContentType != null) {
+            // rows updated by a scan result before the metadata backfill may lack the content type in the database
+            String contentType = inboundMessage.getContentType() != null ? inboundMessage.getContentType() :
+                    objectStore.getContentType(BucketType.PARTNER, messageId.toString()).orElse(null);
+            if (contentType == null) {
+                return Optional.empty();
+            }
+            validateContentType(messageId, contentType, requestedContentType);
+        }
+        ScanStatus scanStatus = inboundMessage.getScanStatus();
+        if (scanStatus == ScanStatus.SCAN_PENDING) {
+            // LEGACY-TAG-FALLBACK: a scan result processed by an MES < 11.0.0 instance during a rolling deployment
+            // updated the S3 tags but not the database - heal the verdict from the tags; remove with the contract
+            // story (JEAP-7252)
+            scanStatus = legacyTagFallbackService.healPendingScanStatus(messageId).orElse(scanStatus);
+        }
+        checkScanStatus(messageId, inboundMessage.getBpId(), scanStatus);
+        return objectStore.loadMessage(BucketType.PARTNER, messageId.toString());
+    }
+
+    /**
+     * LEGACY-TAG-FALLBACK: remove with the contract story (JEAP-7252).
+     */
+    private Optional<MessageContent> getMessageFromPartnerWithLegacyTags(UUID messageId, String requestedContentType) throws MismatchedContentTypeException {
         if (requestedContentType != null) {
             Optional<String> contentTypeOptional = objectStore.getContentType(BucketType.PARTNER, messageId.toString());
-
             if (contentTypeOptional.isEmpty()) {
                 return Optional.empty();
             }
@@ -144,8 +186,32 @@ public class MessageExchangeService {
         if (messageInfoWithTagsOptional.isEmpty()) {
             return Optional.empty();
         }
-        checkScanStatus(messageId, messageInfoWithTagsOptional.get());
+        MessageContent messageContent = messageInfoWithTagsOptional.get();
+        try {
+            S3ObjectTags s3ObjectTags = legacyTagsParser.getTagsfromMap(messageContent.tags());
+            if (malwareScanProperties.isEnabled() && s3ObjectTags.hasNoMetadataTags()) {
+                // An object without any metadata tags was stored by MES >= 11.0.0, but its database record is
+                // unexpectedly missing, e.g. because the upload crashed between storing the object and the
+                // database record. Its scan is still pending - it must not be delivered based on the missing
+                // tag scan status (fail-closed).
+                log.warn("Message {} has no metadata tags and no database record - not delivering because its malware scan is still pending", messageId);
+                throw MalwareScanFailedOrBlockedException.malwareScanFailedOrBlockedException(messageId, ScanStatus.SCAN_PENDING);
+            }
+            checkScanStatus(messageId, s3ObjectTags.bpId(), s3ObjectTags.scanStatus());
+        } catch (RuntimeException e) {
+            // the object stream is already open - close it before rethrowing so the pooled connection is released
+            closeQuietly(messageContent.inputStream());
+            throw e;
+        }
         return messageInfoWithTagsOptional;
+    }
+
+    private static void closeQuietly(InputStream inputStream) {
+        try {
+            inputStream.close();
+        } catch (IOException e) {
+            log.debug("Failed to close message content input stream", e);
+        }
     }
 
     private static void validateContentType(UUID messageId, String contentType, String requestedContentType) throws MismatchedContentTypeException {
@@ -173,23 +239,59 @@ public class MessageExchangeService {
     private void saveNewMessageFromPartner(InputStream inputStream, UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType) throws IOException, MismatchedContentException {
         Optional<InboundMessage> inboundMessageOptional = inboundMessageRepository.findByBpIdAndMessageId(bpId, messageId);
         if (inboundMessageOptional.isEmpty()) {
-            storeInputStreamInS3AndSendEvents(inputStream, messageId, bpId, messageType, partnerTopic, partnerExternalReference, rawMessageContent, contentType);
-            inboundMessageRepository.save(InboundMessage.builder().messageId(messageId).bpId(bpId).contentLength(rawMessageContent.contentLength()).build());
+            storeMessageInS3AndDatabase(inputStream, messageId, bpId, messageType, partnerTopic, partnerExternalReference, rawMessageContent, contentType, false);
         } else {
             handleDuplicatePartnerMessage(inputStream, inboundMessageOptional.get(), messageId, bpId, rawMessageContent, messageType, partnerTopic, partnerExternalReference, contentType);
         }
     }
 
     @SuppressWarnings("java:S107")
-    private void storeInputStreamInS3AndSendEvents(InputStream inputStream, UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType) throws IOException {
-        ScanStatus scanStatus = malwareScanProperties.isEnabled() ? ScanStatus.SCAN_PENDING : ScanStatus.NOT_SCANNED;
-        Map<String, String> tags = tagsService.toMap(bpId, messageType, partnerTopic, partnerExternalReference, scanStatus, System.currentTimeMillis());
+    private void storeMessageInS3AndDatabase(InputStream inputStream, UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, MessageContent rawMessageContent, String contentType, boolean reStoredExistingMessage) throws IOException {
+        ScanStatus initialScanStatus = malwareScanProperties.isEnabled() ? ScanStatus.SCAN_PENDING : ScanStatus.NOT_SCANNED;
+        InboundMessage inboundMessage = newInboundMessage(messageId, bpId, messageType, partnerTopic, partnerExternalReference, rawMessageContent.contentLength(), contentType, initialScanStatus);
 
-        MessageContent messageContent = new MessageContent(inputStream, rawMessageContent.contentLength(), tags);
+        if (reStoredExistingMessage) {
+            // The replaced object content is scanned anew: the existing row (including a previous terminal
+            // scan status) is reset BEFORE the object is stored, so a scan result for the new object can never
+            // be reverted afterwards. Should the put below fail, the row is pending without an object -
+            // fail-closed and safe to retry (the row's content length is unchanged, see the duplicate check).
+            inboundMessageRepository.upsertScanStatusAndMetadata(inboundMessage);
+        }
 
-        // Save to S3
-        objectStore.storeMessage(BucketType.PARTNER, messageId.toString(), messageContent, contentType);
+        // The metadata tags for MES < 11.0.0 instances are written only atomically at object creation, which
+        // cannot race with the GuardDuty object tagging. LEGACY-TAG-FALLBACK: remove with the contract story (JEAP-7252)
+        Map<String, String> legacyTags = legacyTagsFactory.createUploadTags(bpId, messageType, partnerTopic, partnerExternalReference, initialScanStatus);
+        objectStore.storeMessage(BucketType.PARTNER, messageId.toString(), new MessageContent(inputStream, rawMessageContent.contentLength(), legacyTags), contentType);
 
+        if (!reStoredExistingMessage) {
+            // A new message writes its row only after the object exists: a row left behind by a failed upload
+            // would break partner retries with corrected content (the duplicate check rejects a changed content
+            // length). Upsert instead of insert as a safety net for rows the duplicate check could not see,
+            // e.g. from a concurrent upload of the same message. The scan result of the just-stored object may
+            // already have been processed (and backfilled by the legacy tag fallback) before this upsert - its
+            // terminal verdict must not be reverted to pending.
+            inboundMessageRepository.upsertScanStatusAndMetadataKeepingTerminalStatus(inboundMessage);
+        }
+
+        // the database record exists before the scan is triggered: the scan result handler reads it
+        publishEventOrTriggerScan(messageId, bpId, messageType, partnerTopic, partnerExternalReference, contentType);
+    }
+
+    @SuppressWarnings("java:S107")
+    private InboundMessage newInboundMessage(UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, int contentLength, String contentType, ScanStatus initialScanStatus) {
+        return InboundMessage.builder()
+                .messageId(messageId)
+                .bpId(bpId)
+                .contentLength(contentLength)
+                .messageType(messageType)
+                .partnerTopic(StringUtils.hasText(partnerTopic) ? partnerTopic : null)
+                .partnerExternalReference(StringUtils.hasText(partnerExternalReference) ? partnerExternalReference : null)
+                .contentType(contentType)
+                .scanStatus(initialScanStatus)
+                .build();
+    }
+
+    private void publishEventOrTriggerScan(UUID messageId, String bpId, String messageType, String partnerTopic, String partnerExternalReference, String contentType) {
         if (!malwareScanProperties.isEnabled()) {
             // Publish ReceivedEvent and events from configured listeners
             eventPublisher.publishMessageReceivedEvent(messageId, bpId, messageType, partnerTopic, partnerExternalReference, PublishedScanStatus.NOT_SCANNED, contentType);
@@ -224,7 +326,7 @@ public class MessageExchangeService {
 
         } else {
             log.info("Duplicated messageIds found: message with id {} for bpId {} not found in S3. Saving it again...", messageId, bpId);
-            storeInputStreamInS3AndSendEvents(inputStream, messageId, bpId, messageType, partnerTopic, partnerExternalReference, rawMessageContent, contentType);
+            storeMessageInS3AndDatabase(inputStream, messageId, bpId, messageType, partnerTopic, partnerExternalReference, rawMessageContent, contentType, true);
         }
     }
 
@@ -291,69 +393,111 @@ public class MessageExchangeService {
 
     public void onMalwareScanResult(S3ObjectMalwareScanResultInfo scanResultInfo) {
         long messageArrivalTimeInMillis = System.currentTimeMillis();
-        S3ObjectMetadata s3ObjectMetadata = updateAndGetValidatedTags(scanResultInfo);
+        validatePartnerBucketName(scanResultInfo.bucketName());
 
-        metricsService.publishMetrics(scanResultInfo.scanResult(), messageArrivalTimeInMillis, s3ObjectMetadata.tags().saveTimeInMillis());
+        ScanStatus newScanStatus = ScanStatus.fromScanResult(scanResultInfo.scanResult());
+        if (newScanStatus == ScanStatus.SCAN_FAILED) {
+            log.warn("Malware scan failed: {}", scanResultInfo);
+        }
+        UUID messageId = UUID.fromString(scanResultInfo.objectKey());
 
-        if (shouldNotifyMessageReceivedEvent(scanResultInfo, s3ObjectMetadata)) {
-            publishMessageReceivedEvent(scanResultInfo.objectKey(), s3ObjectMetadata);
+        // The terminal status is only committed once the event data is available: a row without metadata takes
+        // the legacy tag fallback, which resolves the event data from S3 before persisting the status. Scan
+        // result processing is swallow-and-acknowledge, so a failure while resolving must leave the row pending
+        // (fail-closed like any lost result) instead of deliverable with the received event never published.
+        Optional<InboundMessage> previousStateOptional = inboundMessageRepository.findLatestByMessageId(messageId)
+                .filter(row -> row.getMessageType() != null)
+                .flatMap(row -> inboundMessageRepository.updateScanStatusReturningPreviousState(messageId, newScanStatus));
+
+        ScanStatus previousScanStatus;
+        Long saveTimeInMillis;
+        ReceivedMessage receivedMessage;
+        if (previousStateOptional.isPresent()) {
+            InboundMessage previousState = previousStateOptional.get();
+            previousScanStatus = previousState.getScanStatus();
+            saveTimeInMillis = previousState.getCreatedAtEpochMillis();
+            receivedMessage = new ReceivedMessage(messageId, previousState.getBpId(), previousState.getMessageType(),
+                    previousState.getPartnerTopic(), previousState.getPartnerExternalReference(), previousState.getContentType());
         } else {
-            log.debug("Not publishing MessageReceivedEvent again for message with id '{}' from business partner with id '{}' " +
-                            "and with external reference '{}' and with scan result '{}'.", scanResultInfo.objectKey(),
-                    s3ObjectMetadata.tags().bpId(), s3ObjectMetadata.tags().partnerExternalReference(), scanResultInfo.scanResult());
+            // LEGACY-TAG-FALLBACK: message stored by MES < 11.0.0, its metadata is only available as S3 object
+            // tags - remove with the contract story (JEAP-7252)
+            Optional<LegacyScanResultData> legacyDataOptional = legacyTagFallbackService.handleScanResult(messageId, scanResultInfo.bucketName(), newScanStatus);
+            if (legacyDataOptional.isEmpty()) {
+                // orphaned object without metadata tags and database record: the scan result was dropped
+                // (already logged) and the message stays undeliverable (fail-closed)
+                return;
+            }
+            LegacyScanResultData legacyData = legacyDataOptional.get();
+            S3ObjectTags previousTags = legacyData.previousTags();
+            previousScanStatus = previousTags.scanStatus();
+            saveTimeInMillis = previousTags.saveTimeInMillis();
+            receivedMessage = new ReceivedMessage(messageId, previousTags.bpId(), previousTags.messageType(),
+                    previousTags.partnerTopic(), previousTags.partnerExternalReference(), legacyData.contentType());
+        }
+
+        updateLegacyScanStatusTag(messageId, newScanStatus);
+
+        metricsService.publishMetrics(scanResultInfo.scanResult(), messageArrivalTimeInMillis, saveTimeInMillis);
+        notifyIfRequired(scanResultInfo.scanResult(), newScanStatus, previousScanStatus, receivedMessage);
+    }
+
+    /**
+     * While the legacy tag compatibility is enabled, the scanStatus tag is updated after a malware scan result
+     * exactly like MES &lt; 11.0.0 did, so that 10.x instances deliver correctly during a rolling deployment.
+     * Best effort: the database is authoritative, and a failed tag update must not lose the received event.
+     * LEGACY-TAG-FALLBACK: remove with the contract story (JEAP-7252).
+     */
+    private void updateLegacyScanStatusTag(UUID messageId, ScanStatus newScanStatus) {
+        Map<String, String> scanStatusTag = legacyTagsFactory.createScanStatusUpdateTags(newScanStatus);
+        if (scanStatusTag.isEmpty()) {
+            return;
+        }
+        try {
+            objectStore.updateTags(BucketType.PARTNER, messageId.toString(), scanStatusTag);
+        } catch (RuntimeException e) {
+            log.error("Failed to update the legacy scanStatus tag of message {} to {} - MES < 11.0.0 instances will " +
+                    "not deliver this message; the authoritative scan status in the database is unaffected", messageId, newScanStatus, e);
         }
     }
 
-    private boolean shouldNotifyMessageReceivedEvent(S3ObjectMalwareScanResultInfo scanResultInfo, S3ObjectMetadata s3ObjectMetadata) {
-        return threatsHaveBeenDetected(scanResultInfo.scanResult()) ||  // we always want to notify about threats
-                !malwareScanWasDisabledWhenReceivingNotifiedMessage(s3ObjectMetadata); // already notified when message was received
+    private void validatePartnerBucketName(String bucketName) {
+        String expectedBucketName = objectStore.getBucketName(BucketType.PARTNER);
+        if (!expectedBucketName.equals(bucketName)) {
+            throw new IllegalStateException("Bucket name mismatch. Expected: " + expectedBucketName + ", actual: " + bucketName);
+        }
+    }
+
+    private void notifyIfRequired(MalwareScanResult scanResult, ScanStatus newScanStatus, ScanStatus previousScanStatus, ReceivedMessage message) {
+        if (shouldNotifyMessageReceivedEvent(scanResult, previousScanStatus)) {
+            eventPublisher.publishMessageReceivedEvent(message.messageId(), message.bpId(), message.messageType(),
+                    message.partnerTopic(), message.partnerExternalReference(), newScanStatus.toPublishedScanStatus(), message.contentType());
+        } else {
+            log.debug("Not publishing MessageReceivedEvent again for message with id '{}' from business partner with id '{}' " +
+                            "and with external reference '{}' and with scan result '{}'.", message.messageId(),
+                    message.bpId(), message.partnerExternalReference(), scanResult);
+        }
+    }
+
+    private boolean shouldNotifyMessageReceivedEvent(MalwareScanResult scanResult, ScanStatus previousScanStatus) {
+        return threatsHaveBeenDetected(scanResult) ||  // we always want to notify about threats
+                !malwareScanWasDisabledWhenReceivingNotifiedMessage(previousScanStatus); // already notified when message was received
     }
 
     private boolean threatsHaveBeenDetected(MalwareScanResult scanResult) {
         return scanResult == MalwareScanResult.THREATS_FOUND;
     }
 
-    private boolean malwareScanWasDisabledWhenReceivingNotifiedMessage(S3ObjectMetadata metadata) {
-        return (metadata.previousTags() != null) && (metadata.previousTags().scanStatus() == ScanStatus.NOT_SCANNED);
-    }
-
-    private void publishMessageReceivedEvent(String objectKey, S3ObjectMetadata s3ObjectMetadata) {
-        UUID messageId = UUID.fromString(objectKey);
-        S3ObjectTags actualTags = s3ObjectMetadata.tags();
-        ScanStatus scanStatus = actualTags.scanStatus();
-        PublishedScanStatus externalPublishedScanStatus = scanStatus.toPublishedScanStatus();
-
-        eventPublisher.publishMessageReceivedEvent(messageId, actualTags.bpId(), actualTags.messageType(), actualTags.partnerTopic(), actualTags.partnerExternalReference(), externalPublishedScanStatus, s3ObjectMetadata.contentType());
+    private boolean malwareScanWasDisabledWhenReceivingNotifiedMessage(ScanStatus previousScanStatus) {
+        return previousScanStatus == ScanStatus.NOT_SCANNED;
     }
 
     private static String createInternalMessageObjectKey(String bpId, UUID messageId) {
         return bpId + "/" + messageId;
     }
 
-    private S3ObjectMetadata updateAndGetValidatedTags(S3ObjectMalwareScanResultInfo internalScanResult) {
-        ScanStatus scanStatus = ScanStatus.fromScanResult(internalScanResult.scanResult());
-        if (scanStatus == ScanStatus.SCAN_FAILED) {
-            log.warn("Malware scan failed: {}", internalScanResult);
-        }
-        String bucketName = internalScanResult.bucketName();
-        String objectKey = internalScanResult.objectKey();
-        return updateAndGetValidatedTags(bucketName, objectKey, scanStatus);
-    }
-
-    private S3ObjectMetadata updateAndGetValidatedTags(String bucketName, String objectKey, ScanStatus scanStatus) {
-        Map<String, String> tagsToUpdate = tagsService.toMap(scanStatus);
-        S3ObjectTagsUpdateResult updateResult = objectStore.updateTagsAndGetTags(BucketType.PARTNER, bucketName, objectKey, tagsToUpdate);
-        return new S3ObjectMetadata(
-                tagsService.getTagsfromMapAndValidate(bucketName, objectKey, updateResult.currentTags()),
-                tagsService.getTagsfromMapAndValidate(bucketName, objectKey, updateResult.previousTags()),
-                objectStore.getContentType(BucketType.PARTNER, bucketName, objectKey));
-    }
-
-    private void checkScanStatus(UUID messageId, MessageContent messageInfoWithTags) {
-        S3ObjectTags s3ObjectTags = tagsService.getTagsfromMap(messageInfoWithTags.tags());
-        ScanStatus scanStatus = s3ObjectTags.scanStatus();
+    private void checkScanStatus(UUID messageId, String bpId, ScanStatus scanStatus) {
         if (!doDeliverMessageWithStatus(scanStatus)) {
-            log.error("Message {}-{} cannot be delivered because its malware scan status is {}", s3ObjectTags.bpId(), messageId, scanStatus);
+            log.error("Message {}-{} cannot be delivered because its malware scan status is {}", bpId, messageId, scanStatus);
             throw MalwareScanFailedOrBlockedException.malwareScanFailedOrBlockedException(messageId, scanStatus);
         }
     }
@@ -365,5 +509,9 @@ public class MessageExchangeService {
         }
         return scanStatus == null || scanStatus == ScanStatus.NOT_SCANNED || scanStatus == ScanStatus.NO_THREATS_FOUND ||
                 !malwareScanProperties.isEnabled() && (scanStatus == ScanStatus.SCAN_PENDING || scanStatus == ScanStatus.SCAN_FAILED);
+    }
+
+    private record ReceivedMessage(UUID messageId, String bpId, String messageType, String partnerTopic,
+                                   String partnerExternalReference, String contentType) {
     }
 }

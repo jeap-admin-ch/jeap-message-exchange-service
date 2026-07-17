@@ -2,7 +2,6 @@ package ch.admin.bit.jeap.messageexchange.objectstorage;
 
 import ch.admin.bit.jeap.messageexchange.domain.MessageContent;
 import ch.admin.bit.jeap.messageexchange.domain.housekeeping.HousekeepingProperties;
-import ch.admin.bit.jeap.messageexchange.domain.objectstore.S3ObjectTagsUpdateResult;
 import ch.admin.bit.jeap.messageexchange.objectstorage.lifecycle.S3LifecycleConfigurationInitializer;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -50,58 +49,53 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
     public void putObject(String bucketName, String objectKey, MessageContent messageContent, String contentType) {
         long contentLength = messageContent.contentLength();
 
-        List<Tag> tagSet = createTags(messageContent.tags());
+        // The authoritative message metadata and the malware scan status live in PostgreSQL (inbound_message).
+        // S3 objects are tagged atomically at creation; the tags passed with the message content are only
+        // written transitionally for MES < 11.0.0 compatibility, as is the scanStatus tag update in
+        // updateTags below (LEGACY-TAG-FALLBACK, removed with JEAP-7252).
+        List<Tag> tagSet = new ArrayList<>();
+        tagSet.add(lifecycleConfigurationInitializer.lifecyclePolicyTag());
+        messageContent.tags().forEach((key, value) -> tagSet.add(Tag.builder().key(key).value(value).build()));
+        Tagging tagging = Tagging.builder()
+                .tagSet(tagSet)
+                .build();
 
-        PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
                 .contentType(contentType)
-                .tagging(Tagging.builder()
-                        .tagSet(tagSet)
-                        .build())
-                .contentLength(contentLength);
-        PutObjectRequest putObjectRequest = requestBuilder.build();
+                .tagging(tagging)
+                .contentLength(contentLength)
+                .build();
         RequestBody requestBody = RequestBody.fromInputStream(messageContent.inputStream(), contentLength);
         PutObjectResponse response = s3Client.putObject(putObjectRequest, requestBody);
         String versionId = response.versionId();
         log.info("Object {}:{} with size {} uploaded to bucket {}.", objectKey, versionId == null ? "" : versionId, contentLength, bucketName);
     }
 
-    public S3ObjectTagsUpdateResult updateTagsAndGetTags(String bucketName, String objectKey, Map<String, String> tagsToUpdate) {
-        // an update of the tags replaces all existing tags, so we have to get the existing tags first
-        Map<String, String> existingTags = getTagsOnObject(bucketName, objectKey);
-        Map<String, String> allTags = new HashMap<>(existingTags);
+    /**
+     * Updates tags on an existing object with a read-merge-put of the complete tag set, exactly like
+     * MES &lt; 11.0.0 did for the scanStatus tag. PutObjectTagging is a full-replace API, so this write can
+     * race with the GuardDuty object tagging (JEAP-7230) - acceptable only because the tags are no longer
+     * authoritative: the malware scan status lives in PostgreSQL, and this update is written solely for
+     * MES &lt; 11.0.0 instances during a rolling deployment.
+     * LEGACY-TAG-FALLBACK: remove with the contract story (JEAP-7252).
+     */
+    public void updateTags(String bucketName, String objectKey, Map<String, String> tagsToUpdate) {
+        // an update of the tags replaces all existing tags, so the existing tags have to be read first
+        Map<String, String> allTags = new HashMap<>(getTagsOnObject(bucketName, objectKey));
         allTags.putAll(tagsToUpdate);
 
-        updateTags(bucketName, objectKey, allTags);
-
-        return new S3ObjectTagsUpdateResult(allTags, existingTags);
-    }
-
-    private void updateTags(String bucketName, String objectKey, Map<String, String> tags) {
-        List<Tag> tagSet = toTags(tags);
-
+        List<Tag> tagSet = allTags.entrySet().stream()
+                .map(entry -> Tag.builder().key(entry.getKey()).value(entry.getValue()).build())
+                .toList();
         PutObjectTaggingRequest request = PutObjectTaggingRequest.builder()
                 .bucket(bucketName)
                 .key(objectKey)
                 .tagging(t -> t.tagSet(tagSet).build())
                 .build();
-
         s3Client.putObjectTagging(request);
         log.debug("Tags updated for object {} in bucket {}", objectKey, bucketName);
-    }
-
-    private List<Tag> createTags(Map<String, String> additionalTags) {
-        List<Tag> tagSet = new ArrayList<>();
-        tagSet.add(lifecycleConfigurationInitializer.lifecyclePolicyTag());
-        tagSet.addAll(toTags(additionalTags));
-        return tagSet;
-    }
-
-    private List<Tag> toTags(Map<String, String> tags) {
-        return tags.entrySet().stream()
-                .map(entry -> Tag.builder().key(entry.getKey()).value(entry.getValue()).build())
-                .toList();
     }
 
 }

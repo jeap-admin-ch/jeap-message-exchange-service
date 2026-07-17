@@ -1,7 +1,5 @@
 package ch.admin.bit.jeap.messageexchange.web;
 
-import ch.admin.bit.jeap.messageexchange.event.message.received.B2BMessageReceivedEvent;
-import ch.admin.bit.jeap.messageexchange.event.message.received.MessageReference;
 import ch.admin.bit.jeap.messaging.kafka.test.KafkaIntegrationTestBase;
 import ch.admin.bit.jeap.security.resource.semanticAuthentication.SemanticApplicationRole;
 import ch.admin.bit.jeap.security.resource.token.JeapAuthenticationContext;
@@ -9,23 +7,17 @@ import ch.admin.bit.jeap.security.test.jws.JwsBuilder;
 import ch.admin.bit.jeap.security.test.jws.JwsBuilderFactory;
 import ch.admin.bit.jeap.security.test.resource.configuration.JeapOAuth2IntegrationTestResourceConfiguration;
 import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -36,11 +28,11 @@ import org.testcontainers.localstack.LocalStackContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectTaggingRequest;
+import software.amazon.awssdk.services.s3.model.Tag;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.time.Duration;
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 import static ch.admin.bit.jeap.messageexchange.web.LocalStackTestSupport.createLocalStackContainer;
@@ -51,14 +43,13 @@ import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration test that verifies the behavior of the MES when malware scanning is disabled
- * but messages with leftover scan statuses from a previous scanning-enabled configuration exist.
- * Simulates the scenario of switching off malware scanning after it had been on.
+ * Verifies that with the legacy tag compatibility disabled (all instances run &gt;= 11.0.0), uploaded objects
+ * carry only the lifecycle tag. LEGACY-TAG-FALLBACK: remove with the contract story (JEAP-7252).
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
         properties = {
-                "server.port=8310",
+                "server.port=8313",
                 "jeap.messageexchange.kafka.topic.message-received=message-received",
                 "jeap.messaging.kafka.error-topic-name=error",
                 "jeap.messaging.kafka.system-name=test",
@@ -69,17 +60,17 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "jeap.messageexchange.objectstorage.connection.bucket-name-partner=test-bucket-partner",
                 "jeap.messageexchange.objectstorage.connection.bucket-name-internal=test-bucket-internal",
                 "jeap.messageexchange.api.max-request-body-size-in-bytes=100",
-                "jeap.messageexchange.malwarescan.enabled=false" // malware scan has been swiched off
+                "jeap.messageexchange.malwarescan.enabled=false",
+                "jeap.messageexchange.legacy-tag-compatibility.enabled=false"
         })
 @ContextConfiguration(classes = {MessageExchangeApplication.class, JeapOAuth2IntegrationTestResourceConfiguration.class})
 @Testcontainers
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@SuppressWarnings({"resource", "SameParameterValue"})
-class MessageExchangeInteractionMalwareScanDisabledTest extends KafkaIntegrationTestBase {
+@SuppressWarnings("resource")
+class MessageExchangeLegacyTagCompatibilityDisabledTest extends KafkaIntegrationTestBase {
 
     private static final String BP_ID = "myBpID";
     private static final String MESSAGE_TYPE = "myMessageType";
-    private static final String XML_RESOURCE = "input.xml";
     private static final String BUCKET_NAME_PARTNER = "test-bucket-partner";
     private static final String BUCKET_NAME_INTERNAL = "test-bucket-internal";
 
@@ -93,17 +84,19 @@ class MessageExchangeInteractionMalwareScanDisabledTest extends KafkaIntegration
     private JwsBuilderFactory jwsBuilderFactory;
 
     @Autowired
-    private ResourceLoader resourceLoader;
-
-    @Autowired
     private TestEventConsumer testEventConsumer;
-
-    @Autowired
-    private NamedParameterJdbcTemplate jdbcTemplate;
 
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
 
     private static S3Client s3Client;
+
+    private RequestSpecification request;
+
+    private static final SemanticApplicationRole B2B_MESSAGE_IN_WRITE = SemanticApplicationRole.builder()
+            .system("junit")
+            .resource("b2bmessagein")
+            .operation("write")
+            .build();
 
     @BeforeAll
     static void startContainers() {
@@ -114,20 +107,6 @@ class MessageExchangeInteractionMalwareScanDisabledTest extends KafkaIntegration
     static void stopContainers() {
         postgres.stop();
     }
-
-    private RequestSpecification request;
-
-    private static final SemanticApplicationRole B2B_MESSAGE_IN_WRITE = SemanticApplicationRole.builder()
-            .system("junit")
-            .resource("b2bmessagein")
-            .operation("write")
-            .build();
-
-    private static final SemanticApplicationRole B2B_MESSAGE_IN_READ = SemanticApplicationRole.builder()
-            .system("junit")
-            .resource("b2bmessagein")
-            .operation("read")
-            .build();
 
     @DynamicPropertySource
     static void dynamicProperties(DynamicPropertyRegistry registry) {
@@ -153,53 +132,8 @@ class MessageExchangeInteractionMalwareScanDisabledTest extends KafkaIntegration
     }
 
     @Test
-    void putMessageFromPartner_malwareScanDisabled_shouldBeAbleToGetMessage() throws Exception {
-        UUID messageId = putMessageAndWaitForNotificationEvent();
-        String xmlContent = getXmlResource(XML_RESOURCE);
-
-        B2BMessageReceivedEvent message = testEventConsumer.getMessageByIdempotenceId(messageId);
-        MessageReference messageReference = message.getReferences().getMessageReference();
-        assertThat(messageReference.getBpId()).isEqualTo(BP_ID);
-        assertThat(messageReference.getMessageId()).isEqualTo(messageId.toString());
-        assertThat(messageReference.getType()).isEqualTo(MESSAGE_TYPE);
-
-        Response response = getMessageAsInternal(messageId);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
-        assertThat(response.getBody().asString()).isEqualTo(xmlContent);
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "SCAN_PENDING,  200, Leftover SCAN_PENDING should be delivered when scanning is disabled",
-            "SCAN_FAILED,   200, Leftover SCAN_FAILED should be delivered when scanning is disabled",
-            "NO_THREATS_FOUND, 200, NO_THREATS_FOUND should always be delivered",
-            "THREATS_FOUND, 403, THREATS_FOUND must block delivery even when scanning is disabled"
-    })
-    void getMessageFromPartner_malwareScanDisabled_leftoverScanStatus(String scanStatus, int expectedHttpStatus, String description) throws Exception {
-        UUID messageId = putMessageAndWaitForNotificationEvent();
-
-        updateScanStatusInDatabase(messageId, scanStatus);
-
-        Response response = getMessageAsInternal(messageId);
-
-        assertThat(response.getStatusCode())
-                .as(description)
-                .isEqualTo(expectedHttpStatus);
-    }
-
-    private Response getMessageAsInternal(UUID messageId) {
-        return given()
-                .spec(request)
-                .accept(MediaType.APPLICATION_XML_VALUE)
-                .auth().oauth2(createAuthTokenForUserRoles(B2B_MESSAGE_IN_READ))
-                .when()
-                .get("/api/internal/v3/messages/" + messageId);
-    }
-
-    private UUID putMessageAndWaitForNotificationEvent() throws Exception {
+    void putMessageFromPartner_legacyTagCompatibilityDisabled_objectCarriesOnlyLifecycleTag() {
         UUID messageId = UUID.randomUUID();
-        String xmlContent = getXmlResource(XML_RESOURCE);
 
         given()
                 .spec(request)
@@ -207,7 +141,7 @@ class MessageExchangeInteractionMalwareScanDisabledTest extends KafkaIntegration
                 .auth().oauth2(createAuthTokenForBpRoles(BP_ID, B2B_MESSAGE_IN_WRITE))
                 .header(HEADER_BP_ID, BP_ID)
                 .header(HEADER_MESSAGE_TYPE, MESSAGE_TYPE)
-                .body(xmlContent)
+                .body("<valid/>")
                 .when()
                 .put("/api/partner/v4/messages/" + messageId)
                 .then()
@@ -217,12 +151,12 @@ class MessageExchangeInteractionMalwareScanDisabledTest extends KafkaIntegration
                 .atMost(Duration.ofSeconds(30))
                 .until(() -> testEventConsumer.hasMessageWithIdempotenceId(messageId));
 
-        return messageId;
-    }
-
-    private void updateScanStatusInDatabase(UUID messageId, String scanStatus) {
-        jdbcTemplate.update("UPDATE inbound_message SET \"scanStatus\" = :scanStatus WHERE \"messageId\" = :messageId",
-                Map.of("scanStatus", scanStatus, "messageId", messageId.toString()));
+        List<Tag> tagSet = s3Client.getObjectTagging(GetObjectTaggingRequest.builder()
+                .bucket(BUCKET_NAME_PARTNER)
+                .key(messageId.toString())
+                .build()).tagSet();
+        assertThat(tagSet).hasSize(1);
+        assertThat(tagSet.getFirst().key()).isEqualTo("MessageExchangeLifecyclePolicy");
     }
 
     private String createAuthTokenForBpRoles(String bpId, SemanticApplicationRole... roles) {
@@ -230,17 +164,5 @@ class MessageExchangeInteractionMalwareScanDisabledTest extends KafkaIntegration
                 .withBusinessPartnerRoles(bpId, roles)
                 .build()
                 .serialize();
-    }
-
-    private String createAuthTokenForUserRoles(SemanticApplicationRole... userroles) {
-        return jwsBuilderFactory.createValidForFixedLongPeriodBuilder(UUID.randomUUID().toString(), JeapAuthenticationContext.SYS)
-                .withUserRoles(userroles)
-                .build()
-                .serialize();
-    }
-
-    private String getXmlResource(String filename) throws IOException {
-        Resource resource = resourceLoader.getResource("classpath:" + filename);
-        return new String(Files.readAllBytes(resource.getFile().toPath()));
     }
 }

@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [11.0.0] - 2026-07-15
+
+See [docs/scan-status-in-database-11.0.0.md](docs/scan-status-in-database-11.0.0.md) for details and upgrade steps.
+
+### Changed
+
+- PostgreSQL replaces S3 object tags as the single source of truth for partner message metadata and malware
+  scan status (migrations V7 to V9), fixing the scan status race with the GuardDuty object tagging - a lost tag update
+  can no longer block message delivery
+- Despite the major version bump this is fully backwards compatible: the 10.x tagging behavior is kept behind
+  jeap.messageexchange.legacy-tag-compatibility.enabled, so mixed 10.x/11.x rolling deployments and even a rollback to
+  10.x are safe while the property is enabled (default on, disable once all instances stay on 11.x); messages stored by
+  earlier versions are read via an S3 tag fallback, and scan results processed by a 10.x instance during a rolling
+  deployment are healed on read (messages stuck by the historic GuardDuty race need manual repair, see docs); all
+  removed in JEAP-7252
+- Inbound message database records outlive the corresponding S3 objects (retained two days past the configured
+  expiration); a malware-blocked partner message therefore returns 403 even after its S3 object expired (previously 404)
+- Scan status checks and duplicate detection always read from the primary database, never from a read replica: a message is guaranteed retrievable as soon as its B2BMessageReceivedEvent is published
+- Delivery fails closed if the database record of a new message is unexpectedly missing, and storing a new message never
+  downgrades a terminal scan status written by a scan result that raced ahead of the upload's database insert
+- Inbound message inserts are timed as jeap_mes_repository_upsert_scan_status_and_metadata instead of
+  jeap_mes_repository_save (which remains for saves of messages from internal applications)
+
+### Added
+- Documentation under docs/ (architecture, message flows with failure modes and idempotence, REST API, malware scanning, operations), ported and updated from Confluence
+
 ## [10.3.0] - 2026-07-15
 
 ### Dependencies
@@ -300,7 +326,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Added the Nivel S3 malware scan plugin module.
+- Added the AWS S3 malware scan plugin module.
 
 ## [3.1.0] - 2025-11-14
 
