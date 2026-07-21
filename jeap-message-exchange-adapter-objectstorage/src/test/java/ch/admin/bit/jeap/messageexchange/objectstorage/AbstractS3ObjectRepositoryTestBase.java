@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.localstack.LocalStackContainer;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -15,6 +15,8 @@ import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+
+import java.net.URI;
 
 @SpringBootTest(
         classes = ObjectStorageConfiguration.class,
@@ -28,13 +30,19 @@ public class AbstractS3ObjectRepositoryTestBase {
     protected static final String TEST_BUCKET_NAME = "test-bucket";
     protected static final String TEST_BUCKET_2_NAME = "test-bucket-2";
 
+    private static final String RUSTFS_IMAGE = "rustfs/rustfs:latest";
+    private static final int RUSTFS_PORT = 9000;
+    private static final String RUSTFS_ACCESS_KEY = "dev";
+    private static final String RUSTFS_SECRET_KEY = "devsecret";
+    private static final String RUSTFS_REGION = "aws-global";
+
     protected static S3Client s3Client;
 
-    public static LocalStackContainer localStack;
+    public static GenericContainer<?> rustFs;
 
     static {
-        localStack = createLocalStackContainer();
-        localStack.start();
+        rustFs = createRustFsContainer();
+        rustFs.start();
     }
 
     static class TestConfig {
@@ -48,25 +56,30 @@ public class AbstractS3ObjectRepositoryTestBase {
     }
 
     @SuppressWarnings("resource")
-    private static LocalStackContainer createLocalStackContainer() {
-        return new LocalStackContainer(DockerImageName.parse("localstack/localstack:4.10.0")
-                .asCompatibleSubstituteFor("localstack/localstack"))
-                .withEnv("DISABLE_EVENTS", "1") // Disable localstack features that require an internet connection
-                .withEnv("SKIP_INFRA_DOWNLOADS", "1")
-                .withEnv("SKIP_SSL_CERT_DOWNLOAD", "1");
+    private static GenericContainer<?> createRustFsContainer() {
+        return new GenericContainer<>(DockerImageName.parse(RUSTFS_IMAGE))
+                .withExposedPorts(RUSTFS_PORT)
+                .withEnv("RUSTFS_ACCESS_KEY", RUSTFS_ACCESS_KEY)
+                .withEnv("RUSTFS_SECRET_KEY", RUSTFS_SECRET_KEY)
+                .withCommand("/data");
+    }
+
+    private static URI getEndpoint() {
+        return URI.create("http://" + rustFs.getHost() + ":" + rustFs.getMappedPort(RUSTFS_PORT));
     }
 
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
-        registry.add("jeap.messageexchange.objectstorage.connection.region", () -> localStack.getRegion());
-        registry.add("jeap.messageexchange.objectstorage.connection.access-key", () -> localStack.getAccessKey());
-        registry.add("jeap.messageexchange.objectstorage.connection.secret-key", () -> localStack.getSecretKey());
-        registry.add("jeap.messageexchange.objectstorage.connection.access-url", () -> localStack.getEndpoint().toString());
+        registry.add("jeap.messageexchange.objectstorage.connection.region", () -> RUSTFS_REGION);
+        registry.add("jeap.messageexchange.objectstorage.connection.access-key", () -> RUSTFS_ACCESS_KEY);
+        registry.add("jeap.messageexchange.objectstorage.connection.secret-key", () -> RUSTFS_SECRET_KEY);
+        registry.add("jeap.messageexchange.objectstorage.connection.access-url", () -> getEndpoint().toString());
 
         s3Client = S3Client.builder()
-                .region(Region.of(localStack.getRegion()))
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(localStack.getAccessKey(), localStack.getSecretKey())))
-                .endpointOverride(localStack.getEndpoint())
+                .region(Region.of(RUSTFS_REGION))
+                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(RUSTFS_ACCESS_KEY, RUSTFS_SECRET_KEY)))
+                .endpointOverride(getEndpoint())
+                .forcePathStyle(true)
                 .httpClientBuilder(UrlConnectionHttpClient.builder()
                         .proxyConfiguration(ProxyConfiguration.builder()
                                 .useSystemPropertyValues(false)

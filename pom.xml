@@ -35,7 +35,7 @@
 
     <artifactId>jeap-message-exchange-service</artifactId>
     <name>${project.groupId}:${project.artifactId}</name>
-    <version>12.0.0-SNAPSHOT</version>
+    <version>12.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
@@ -46,6 +46,8 @@
         <sonar.coverage.exclusions>**/Pacticipants.java,**/PactProviderTestBase.java</sonar.coverage.exclusions>
         <aalto-xml.version>1.4.0</aalto-xml.version>
         <commons-io.version>2.22.0</commons-io.version>
+        <wiremock-standalone.version>3.13.2</wiremock-standalone.version>
+        <testcontainers-floci.version>2.11.0</testcontainers-floci.version>
     </properties>
 
     <modules>
@@ -76,53 +78,65 @@
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-malware-adapter-api</artifactId>
-                <version>12.0.0-SNAPSHOT</version>
+                <version>12.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-domain</artifactId>
-                <version>12.0.0-SNAPSHOT</version>
+                <version>12.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-persistence</artifactId>
-                <version>12.0.0-SNAPSHOT</version>
+                <version>12.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-objectstorage</artifactId>
-                <version>12.0.0-SNAPSHOT</version>
+                <version>12.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-kafka</artifactId>
-                <version>12.0.0-SNAPSHOT</version>
+                <version>12.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-metrics</artifactId>
-                <version>12.0.0-SNAPSHOT</version>
+                <version>12.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-web</artifactId>
-                <version>12.0.0-SNAPSHOT</version>
+                <version>12.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-test</artifactId>
-                <version>12.0.0-SNAPSHOT</version>
+                <version>12.1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-malware-aws-s3</artifactId>
-                <version>12.0.0-SNAPSHOT</version>
+                <version>12.1.0-SNAPSHOT</version>
             </dependency>
 
             <dependency>
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
                 <version>${commons-io.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wiremock</groupId>
+                <artifactId>wiremock-standalone</artifactId>
+                <version>${wiremock-standalone.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.floci</groupId>
+                <artifactId>testcontainers-floci</artifactId>
+                <version>${testcontainers-floci.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

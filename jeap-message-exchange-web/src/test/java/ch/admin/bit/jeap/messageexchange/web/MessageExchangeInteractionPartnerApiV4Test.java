@@ -34,7 +34,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.localstack.LocalStackContainer;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
@@ -47,8 +47,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static ch.admin.bit.jeap.messageexchange.web.LocalStackTestSupport.createLocalStackContainer;
-import static ch.admin.bit.jeap.messageexchange.web.LocalStackTestSupport.createS3Client;
+import static ch.admin.bit.jeap.messageexchange.web.RustFsTestSupport.createRustFsContainer;
+import static ch.admin.bit.jeap.messageexchange.web.RustFsTestSupport.createS3Client;
 import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.*;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -79,7 +79,7 @@ import static org.mockito.Mockito.verify;
 class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBase {
 
     @Container
-    public static LocalStackContainer localStack = createLocalStackContainer();
+    public static GenericContainer<?> rustFs = createRustFsContainer();
 
     @LocalServerPort
     int serverPort;
@@ -140,17 +140,17 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
 
     @DynamicPropertySource
     static void dynamicProperties(DynamicPropertyRegistry registry) {
-        registry.add("jeap.messageexchange.objectstorage.connection.region", () -> localStack.getRegion());
-        registry.add("jeap.messageexchange.objectstorage.connection.access-key", () -> localStack.getAccessKey());
-        registry.add("jeap.messageexchange.objectstorage.connection.secret-key", () -> localStack.getSecretKey());
-        registry.add("jeap.messageexchange.objectstorage.connection.accessUrl", () -> localStack.getEndpoint());
+        registry.add("jeap.messageexchange.objectstorage.connection.region", () -> RustFsTestSupport.RUSTFS_REGION);
+        registry.add("jeap.messageexchange.objectstorage.connection.access-key", () -> RustFsTestSupport.RUSTFS_ACCESS_KEY);
+        registry.add("jeap.messageexchange.objectstorage.connection.secret-key", () -> RustFsTestSupport.RUSTFS_SECRET_KEY);
+        registry.add("jeap.messageexchange.objectstorage.connection.accessUrl", () -> RustFsTestSupport.getEndpoint(rustFs));
         registry.add("spring.datasource.url", () -> postgres.getJdbcUrl());
         registry.add("spring.datasource.username", () -> postgres.getUsername());
         registry.add("spring.datasource.password", () -> postgres.getPassword());
     }
 
     static void createBucket() {
-        S3Client s3Client = createS3Client(localStack);
+        S3Client s3Client = createS3Client(rustFs);
         CreateBucketRequest createPartnerBucketRequest = CreateBucketRequest.builder()
                 .bucket("test-bucket-partner")
                 .build();
