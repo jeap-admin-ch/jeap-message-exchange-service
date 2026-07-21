@@ -9,6 +9,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -19,6 +20,9 @@ import java.util.Map;
 
 @Slf4j
 public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository {
+
+    // The RequestBody mime type is unused for the upload - the PutObjectRequest sets the content type explicitly
+    private static final String OCTET_STREAM_MIME_TYPE = "application/octet-stream";
 
     private final S3Client noRetryS3Client;
     private final S3ObjectStorageConnectionProperties connectionProperties;
@@ -85,12 +89,12 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
             // "Content input stream does not support mark/reset"
             return s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, contentLength));
         }
-        if (inputStream.markSupported()) {
-            // already re-readable (e.g. a request body buffered by the web layer), the SDK resets it on retry
-            return s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, contentLength));
-        }
+        // Every stream is treated as one-shot, even a mark-supported one: the stream may be a tee into the
+        // XML validator, and an SDK reset/re-read on retry would feed the validator twice.
         if (contentLength <= connectionProperties.getUploadRetryMemoryBufferThreshold().toBytes()) {
-            return s3Client.putObject(putObjectRequest, RequestBody.fromBytes(readBodyFully(inputStream, contentLength)));
+            byte[] body = readBodyFully(inputStream, contentLength);
+            return s3Client.putObject(putObjectRequest, RequestBody.fromContentProvider(
+                    () -> new ByteArrayInputStream(body), contentLength, OCTET_STREAM_MIME_TYPE));
         }
         // a body above the buffer threshold is streamed without retries: the one-shot stream cannot be re-read,
         // so the request fails fast with the actual S3 error and the client must retry the idempotent PUT

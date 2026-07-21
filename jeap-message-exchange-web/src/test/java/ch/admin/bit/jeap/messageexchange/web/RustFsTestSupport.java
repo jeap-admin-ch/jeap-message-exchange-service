@@ -15,7 +15,7 @@ import java.net.URI;
 @UtilityClass
 public final class RustFsTestSupport {
 
-    public static final String RUSTFS_IMAGE = "rustfs/rustfs:latest";
+    public static final String RUSTFS_IMAGE = "rustfs/rustfs:1.0.0-beta.10";
     public static final int RUSTFS_PORT = 9000;
     public static final String RUSTFS_ACCESS_KEY = "dev";
     public static final String RUSTFS_SECRET_KEY = "devsecret";

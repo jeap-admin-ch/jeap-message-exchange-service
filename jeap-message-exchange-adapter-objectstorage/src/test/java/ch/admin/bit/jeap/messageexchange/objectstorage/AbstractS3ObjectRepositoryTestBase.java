@@ -30,7 +30,7 @@ public class AbstractS3ObjectRepositoryTestBase {
     protected static final String TEST_BUCKET_NAME = "test-bucket";
     protected static final String TEST_BUCKET_2_NAME = "test-bucket-2";
 
-    private static final String RUSTFS_IMAGE = "rustfs/rustfs:latest";
+    private static final String RUSTFS_IMAGE = "rustfs/rustfs:1.0.0-beta.10";
     private static final int RUSTFS_PORT = 9000;
     private static final String RUSTFS_ACCESS_KEY = "dev";
     private static final String RUSTFS_SECRET_KEY = "devsecret";

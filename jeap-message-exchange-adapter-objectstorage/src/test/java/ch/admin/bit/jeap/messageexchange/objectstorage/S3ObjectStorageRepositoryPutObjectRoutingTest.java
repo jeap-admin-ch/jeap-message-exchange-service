@@ -62,14 +62,27 @@ class S3ObjectStorageRepositoryPutObjectRoutingTest {
     }
 
     @Test
-    void putObject_markSupportedStream_usesRetryingClientRegardlessOfSize() {
-        byte[] content = "x".repeat(100).getBytes(UTF_8); // above the threshold
+    void putObject_smallMarkSupportedStream_isBufferedAndUsesRetryingClient() {
+        // even a mark-supported stream is buffered: it may be a tee into the XML validator, which an SDK
+        // reset/re-read on retry would feed twice
+        byte[] content = "small".getBytes(UTF_8);
         MessageContent messageContent = new MessageContent(new ByteArrayInputStream(content), content.length);
 
         repository.putObject(BUCKET, KEY, messageContent, MediaType.APPLICATION_XML_VALUE);
 
         verify(retryingClient).putObject(any(PutObjectRequest.class), any(RequestBody.class));
         verifyNoInteractions(noRetryClient);
+    }
+
+    @Test
+    void putObject_largeMarkSupportedStream_usesNoRetryClient() {
+        byte[] content = "x".repeat((int) THRESHOLD_BYTES + 1).getBytes(UTF_8);
+        MessageContent messageContent = new MessageContent(new ByteArrayInputStream(content), content.length);
+
+        repository.putObject(BUCKET, KEY, messageContent, MediaType.APPLICATION_XML_VALUE);
+
+        verify(noRetryClient).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+        verifyNoInteractions(retryingClient);
     }
 
     @Test
