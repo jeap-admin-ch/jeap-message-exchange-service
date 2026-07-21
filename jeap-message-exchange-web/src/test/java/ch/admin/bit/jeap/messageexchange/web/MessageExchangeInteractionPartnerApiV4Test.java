@@ -104,6 +104,7 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
     @BeforeAll
     static void startContainers() {
         postgres.start();
+        createBucket();
     }
 
     @AfterAll
@@ -148,7 +149,6 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
         registry.add("spring.datasource.password", () -> postgres.getPassword());
     }
 
-    @BeforeAll
     static void createBucket() {
         S3Client s3Client = createS3Client(localStack);
         CreateBucketRequest createPartnerBucketRequest = CreateBucketRequest.builder()

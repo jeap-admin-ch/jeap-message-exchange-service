@@ -15,10 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -70,11 +70,11 @@ public class JdbcInboundMessageRepository implements InboundMessageRepository {
                 "createdAt" = EXCLUDED."createdAt"
             """;
 
-    // SQL literal list of the terminal scan statuses, e.g. 'NO_THREATS_FOUND','THREATS_FOUND','SCAN_FAILED'
-    private static final String TERMINAL_SCAN_STATUSES = Arrays.stream(ScanStatus.values())
+    // The terminal scan statuses, bound as the named list parameter :terminalScanStatuses
+    private static final List<String> TERMINAL_SCAN_STATUSES = Arrays.stream(ScanStatus.values())
             .filter(ScanStatus::isTerminal)
-            .map(status -> "'" + status.name() + "'")
-            .collect(Collectors.joining(","));
+            .map(Enum::name)
+            .toList();
 
     // A terminal scan status is never downgraded: the scan result of the just-stored object may have been
     // processed before this upsert - see InboundMessageRepository#upsertScanStatusAndMetadataKeepingTerminalStatus
@@ -86,12 +86,12 @@ public class JdbcInboundMessageRepository implements InboundMessageRepository {
                 "partnerTopic" = EXCLUDED."partnerTopic",
                 "partnerExternalReference" = EXCLUDED."partnerExternalReference",
                 "contentType" = EXCLUDED."contentType",
-                "scanStatus" = CASE WHEN inbound_message."scanStatus" IN (%s)
+                "scanStatus" = CASE WHEN inbound_message."scanStatus" IN (:terminalScanStatuses)
                                     THEN inbound_message."scanStatus"
                                     ELSE EXCLUDED."scanStatus" END,
                 "contentLength" = EXCLUDED."contentLength",
                 "createdAt" = EXCLUDED."createdAt"
-            """.formatted(TERMINAL_SCAN_STATUSES);
+            """;
 
     private static final String DELETE_EXPIRED_MESSAGES = """
             WITH rows AS
@@ -179,7 +179,8 @@ public class JdbcInboundMessageRepository implements InboundMessageRepository {
     @Transactional
     @Timed(value = "jeap_mes_repository_upsert_scan_status_and_metadata", description = "Time taken to upsert the scan status and metadata of an inbound message in the DB", percentiles = {0.5, 0.8, 0.95, 0.99})
     public void upsertScanStatusAndMetadataKeepingTerminalStatus(InboundMessage inboundMessage) {
-        jdbcTemplate.update(UPSERT_SCAN_STATUS_AND_METADATA_KEEPING_TERMINAL_STATUS, toParams(inboundMessage));
+        jdbcTemplate.update(UPSERT_SCAN_STATUS_AND_METADATA_KEEPING_TERMINAL_STATUS,
+                toParams(inboundMessage).addValue("terminalScanStatuses", TERMINAL_SCAN_STATUSES));
     }
 
     @Override

@@ -126,6 +126,7 @@ class MessageExchangeLegacyTagFallbackTest extends KafkaIntegrationTestBase {
     @BeforeAll
     static void startContainers() {
         postgres.start();
+        createBucket();
     }
 
     @AfterAll
@@ -144,7 +145,6 @@ class MessageExchangeLegacyTagFallbackTest extends KafkaIntegrationTestBase {
         registry.add("spring.datasource.password", () -> postgres.getPassword());
     }
 
-    @BeforeAll
     static void createBucket() {
         s3Client = createS3Client(localStack);
         s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET_NAME_PARTNER).build());
@@ -235,11 +235,12 @@ class MessageExchangeLegacyTagFallbackTest extends KafkaIntegrationTestBase {
 
         // the database row is backfilled with the metadata from the tags and the new scan status
         Map<String, Object> row = selectInboundMessageRow(messageId);
-        assertThat(row.get("scanStatus")).isEqualTo("NO_THREATS_FOUND");
-        assertThat(row.get("messageType")).isEqualTo(MESSAGE_TYPE);
-        assertThat(row.get("partnerTopic")).isEqualTo(PARTNER_TOPIC);
-        assertThat(row.get("partnerExternalReference")).isEqualTo(PARTNER_EXTERNAL_REFERENCE);
-        assertThat(row.get("contentType")).isEqualTo(MediaType.APPLICATION_XML_VALUE);
+        assertThat(row)
+                .containsEntry("scanStatus", "NO_THREATS_FOUND")
+                .containsEntry("messageType", MESSAGE_TYPE)
+                .containsEntry("partnerTopic", PARTNER_TOPIC)
+                .containsEntry("partnerExternalReference", PARTNER_EXTERNAL_REFERENCE)
+                .containsEntry("contentType", MediaType.APPLICATION_XML_VALUE);
 
         // after the backfill, the message is delivered based on the database scan status
         Response response = getMessageAsInternal(messageId);
@@ -256,9 +257,10 @@ class MessageExchangeLegacyTagFallbackTest extends KafkaIntegrationTestBase {
         triggerScanResultAndAwaitEvent(messageId, MalwareScanResult.NO_THREATS_FOUND);
 
         Map<String, Object> row = selectInboundMessageRow(messageId);
-        assertThat(row.get("bpId")).isEqualTo(BP_ID);
-        assertThat(row.get("scanStatus")).isEqualTo("NO_THREATS_FOUND");
-        assertThat(row.get("messageType")).isEqualTo(MESSAGE_TYPE);
+        assertThat(row)
+                .containsEntry("bpId", BP_ID)
+                .containsEntry("scanStatus", "NO_THREATS_FOUND")
+                .containsEntry("messageType", MESSAGE_TYPE);
         assertThat(((Number) row.get("contentLength")).intValue()).isEqualTo(XML_CONTENT.getBytes(StandardCharsets.UTF_8).length);
 
         Response response = getMessageAsInternal(messageId);
@@ -273,7 +275,7 @@ class MessageExchangeLegacyTagFallbackTest extends KafkaIntegrationTestBase {
         triggerScanResultAndAwaitEvent(messageId, MalwareScanResult.THREATS_FOUND);
 
         Map<String, Object> row = selectInboundMessageRow(messageId);
-        assertThat(row.get("scanStatus")).isEqualTo("THREATS_FOUND");
+        assertThat(row).containsEntry("scanStatus", "THREATS_FOUND");
 
         Response response = getMessageAsInternal(messageId);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN.value());
@@ -310,7 +312,7 @@ class MessageExchangeLegacyTagFallbackTest extends KafkaIntegrationTestBase {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK.value());
         assertThat(response.getBody().asString()).isEqualTo(XML_CONTENT);
-        assertThat(selectInboundMessageRow(messageId).get("scanStatus")).isEqualTo("NO_THREATS_FOUND");
+        assertThat(selectInboundMessageRow(messageId)).containsEntry("scanStatus", "NO_THREATS_FOUND");
     }
 
     private void createLegacyMessage(UUID messageId, String scanStatus, boolean withDatabaseRow) {

@@ -21,6 +21,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -112,7 +113,7 @@ class JdbcMessageRepositoryITTest {
         assertNotNull(savedMessage.getDatePublished());
 
         UUID message2Id = UUID.randomUUID();
-        LocalDateTime timeIn2000 = LocalDateTime.of(2000, 1, 1, 13, 45);
+        LocalDateTime timeIn2000 = LocalDateTime.of(2000, Month.JANUARY, 1, 13, 45);
         Message message2 = Message.builder()
                 .messageId(message2Id)
                 .bpId("myBpId2")

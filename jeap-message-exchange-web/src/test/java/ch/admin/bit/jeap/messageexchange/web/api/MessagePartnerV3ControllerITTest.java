@@ -40,6 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("controller-test")
 @ContextConfiguration(classes = RestApiTestContext.class)
 @AutoConfigureMockMvc
+@SuppressWarnings("java:S5738") // tests the deprecated V3 API, which is intentionally kept until all partners have migrated to the V4 API
 class MessagePartnerV3ControllerITTest {
 
     @MockitoBean

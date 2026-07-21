@@ -150,6 +150,7 @@ public class JdbcMessageRepository implements MessageRepository {
     @Override
     @TransactionalReadReplica
     @Timed(value = "jeap_mes_repository_get_messages", description = "Time taken to get messages from the DB", percentiles = {0.5, 0.8, 0.95, 0.99})
+    @SuppressWarnings("java:S2077") // safe: the query is assembled from hard-coded clause constants only, all values are bound as named parameters
     public List<MessageSearchResultDto> getMessages(String bpId, String topicName, String groupId, UUID lastMessageId, String partnerTopic, String partnerExternalReference, int size) {
 
         Optional<BigInteger> sequenceId = Optional.empty();
@@ -214,6 +215,7 @@ public class JdbcMessageRepository implements MessageRepository {
     @Override
     @TransactionalReadReplica
     @Timed(value = "jeap_mes_repository_get_next_message_id", description = "Time taken to get next message ID from the DB", percentiles = {0.5, 0.8, 0.95, 0.99})
+    @SuppressWarnings("java:S2077") // safe: the query is assembled from hard-coded clause constants only, all values are bound as named parameters
     public Optional<Message> getNextMessage(UUID lastMessageId, String bpId, String partnerTopic, String topicName, String partnerExternalReference) {
         Optional<BigInteger> sequenceId = getSequenceId(bpId, lastMessageId.toString());
         if (sequenceId.isPresent()) {

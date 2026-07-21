@@ -44,6 +44,7 @@ import static org.springframework.util.StringUtils.hasText;
 @Validated
 @RequestMapping("/api/partner/v3/messages")
 @Deprecated(since="4.0.0", forRemoval=true)  // replaced by MessagePartnerV4Controller
+@SuppressWarnings("java:S1133") // the V3 API is intentionally kept until all partners have migrated to the V4 API
 public class MessagePartnerV3Controller {
 
     private static final String MESSAGE_ID = "messageId";

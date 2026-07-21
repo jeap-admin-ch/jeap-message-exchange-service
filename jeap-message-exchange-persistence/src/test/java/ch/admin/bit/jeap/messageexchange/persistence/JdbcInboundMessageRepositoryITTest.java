@@ -20,6 +20,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -98,7 +99,7 @@ class JdbcInboundMessageRepositoryITTest {
         assertEquals(100, savedMessage.getContentLength());
         assertNotNull(savedMessage.getCreatedAt());
 
-        LocalDateTime timeIn2000 = LocalDateTime.of(2000, 1, 1, 13, 45);
+        LocalDateTime timeIn2000 = LocalDateTime.of(2000, Month.JANUARY, 1, 13, 45);
         InboundMessage message2 = InboundMessage.builder()
                 .messageId(messageId)
                 .bpId("myBpId2")
@@ -336,7 +337,7 @@ class JdbcInboundMessageRepositoryITTest {
     @Test
     void upsertScanStatusAndMetadata_onConflictUpdatesAllFieldsIncludingCreatedAt() {
         UUID messageId = UUID.randomUUID();
-        LocalDateTime originalCreatedAt = LocalDateTime.of(2020, 1, 1, 13, 45);
+        LocalDateTime originalCreatedAt = LocalDateTime.of(2020, Month.JANUARY, 1, 13, 45);
         InboundMessage legacyRow = InboundMessage.builder()
                 .messageId(messageId)
                 .bpId("myBpId")
@@ -345,7 +346,7 @@ class JdbcInboundMessageRepositoryITTest {
                 .build();
         inboundMessageRepository.upsertScanStatusAndMetadata(legacyRow);
 
-        LocalDateTime newCreatedAt = LocalDateTime.of(2026, 7, 8, 13, 45);
+        LocalDateTime newCreatedAt = LocalDateTime.of(2026, Month.JULY, 8, 13, 45);
         InboundMessage update = InboundMessage.builder()
                 .messageId(messageId)
                 .bpId("myBpId")
@@ -396,7 +397,7 @@ class JdbcInboundMessageRepositoryITTest {
                     .scanStatus(terminalStatus)
                     .build());
 
-            LocalDateTime newCreatedAt = LocalDateTime.of(2026, 7, 8, 13, 45);
+            LocalDateTime newCreatedAt = LocalDateTime.of(2026, Month.JULY, 8, 13, 45);
             inboundMessageRepository.upsertScanStatusAndMetadataKeepingTerminalStatus(inboundMessage(messageId, "myBpId", ScanStatus.SCAN_PENDING, newCreatedAt));
 
             InboundMessage result = inboundMessageRepository.findByBpIdAndMessageId("myBpId", messageId).orElseThrow();

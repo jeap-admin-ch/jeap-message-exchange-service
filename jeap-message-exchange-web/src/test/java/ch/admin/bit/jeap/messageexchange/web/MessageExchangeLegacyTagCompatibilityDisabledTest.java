@@ -101,6 +101,7 @@ class MessageExchangeLegacyTagCompatibilityDisabledTest extends KafkaIntegration
     @BeforeAll
     static void startContainers() {
         postgres.start();
+        createBucket();
     }
 
     @AfterAll
@@ -119,7 +120,6 @@ class MessageExchangeLegacyTagCompatibilityDisabledTest extends KafkaIntegration
         registry.add("spring.datasource.password", () -> postgres.getPassword());
     }
 
-    @BeforeAll
     static void createBucket() {
         s3Client = createS3Client(localStack);
         s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET_NAME_PARTNER).build());
