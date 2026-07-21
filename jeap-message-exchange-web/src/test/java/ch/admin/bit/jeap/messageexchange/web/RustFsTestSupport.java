@@ -15,11 +15,11 @@ import java.net.URI;
 @UtilityClass
 public final class RustFsTestSupport {
 
-    public final String RUSTFS_IMAGE = "rustfs/rustfs:latest";
-    public final int RUSTFS_PORT = 9000;
-    public final String RUSTFS_ACCESS_KEY = "dev";
-    public final String RUSTFS_SECRET_KEY = "devsecret";
-    public final String RUSTFS_REGION = "aws-global";
+    public static final String RUSTFS_IMAGE = "rustfs/rustfs:latest";
+    public static final int RUSTFS_PORT = 9000;
+    public static final String RUSTFS_ACCESS_KEY = "dev";
+    public static final String RUSTFS_SECRET_KEY = "devsecret";
+    public static final String RUSTFS_REGION = "aws-global";
 
     /**
      * Creates a RustFS container providing an S3-compatible object storage for tests.
