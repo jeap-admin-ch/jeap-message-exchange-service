@@ -34,7 +34,7 @@ sequenceDiagram
     MES->>MES: validate token (bp role), media type, size
     MES->>DB: findByBpIdAndMessageId (duplicate check)
     alt new message
-        MES->>S3: PutObject key=messageId (streamed,<br/>legacy metadata tags set atomically*)
+        MES->>S3: PutObject key=messageId (buffered or streamed,<br/>legacy metadata tags set atomically*)
         MES->>DB: upsert row, keeping an existing terminal scanStatus
         alt malware scanning enabled
             Note over MES: no event yet - GuardDuty scans the object,<br/>the scan result releases the message
@@ -63,7 +63,9 @@ sequenceDiagram
 
 ### Ordering: why S3 before the database for new messages — but not for re-stores
 
-- **New message: S3 put first, row second.** The XML payload (v3 API) is validated *while* streaming to S3.
+- **New message: S3 put first, row second.** The XML payload (v3 API) is validated *while* the request body
+  is read — during in-memory buffering (bodies up to `upload-retry-memory-buffer-threshold`, retried on
+  transient S3 errors) or while streaming to S3 (larger bodies, fail fast on the first S3 error).
   If the row were written first and the upload then failed, the leftover row would break the partner's retry
   with corrected content: the duplicate check rejects a changed content length with 409. Writing the object
   first means a failed upload leaves *no row* and the retry runs as a fresh upload.
@@ -78,7 +80,7 @@ sequenceDiagram
 
 | Crash window                                  | Resulting state                                                          | Recovery                                                                                                                                                                                                                                                                                                                              |
 |-----------------------------------------------|--------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| During streaming/XML validation               | Nothing persisted (new message) or pending row without object (re-store) | Partner retries; both states accept a fresh upload                                                                                                                                                                                                                                                                                    |
+| During upload/XML validation                  | Nothing persisted (new message) or pending row without object (re-store) | Partner retries; both states accept a fresh upload                                                                                                                                                                                                                                                                                    |
 | After S3 put, before row upsert (new message) | Object without database row                                              | Delivery stays fail-closed (403 while scanning is enabled). With legacy tag compatibility **on**, the scan result backfills the row from the object tags and releases the message. With compatibility **off**, the scan result for the orphaned object is dropped with a warning; the partner's retry re-uploads and creates the row. |
 | After row upsert, before event/scan trigger   | Row + object consistent                                                  | On AWS, GuardDuty scans on object creation independently of the MES trigger, so the scan result still arrives and publishes the event. With scanning disabled, the `NOT_SCANNED` event is lost if the client treats 5xx as success — partners must retry non-2xx responses.                                                           |
 
@@ -191,7 +193,7 @@ sequenceDiagram
     participant K as Kafka
 
     INT->>MES: PUT /api/internal/v3/messages/{messageId} (bp-id, topicName, ...)
-    MES->>S3: PutObject key=bpId/messageId (streamed)
+    MES->>S3: PutObject key=bpId/messageId (buffered or streamed)
     MES->>DB: INSERT into b2bhub_db_table
     Note over MES,DB: duplicate key: logged + skipped (idempotent retry)
     opt jeap.messageexchange.messagesent.enabled=true
