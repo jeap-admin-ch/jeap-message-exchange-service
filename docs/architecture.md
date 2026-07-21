@@ -130,7 +130,9 @@ deployment consists of:
 - **Standard blocking Spring Boot web stack** — no reactive stack, no virtual threads. The MES is dominated
   by I/O against finite resources (database connection pool, S3); virtual-thread support in the involved
   client libraries was not mature enough to justify the risk. Concurrency is tuned via the Tomcat thread
-  pool (300 by default) and horizontal scaling. Payloads are streamed, not buffered.
+  pool (300 by default) and horizontal scaling. Payloads up to a configurable threshold (default 1 MB) are
+  buffered in memory so transient S3 errors can be retried; larger payloads are streamed without buffering
+  and fail fast on an S3 error, relying on the client retrying the idempotent PUT.
 - **No distributed cache, no CQRS.** PostgreSQL tuning, indexes and (optional) read replicas proved
   sufficient; caching (ElastiCache) remains a documented fallback option if load grows beyond that. CQRS was
   rejected because it would break persistence compatibility for no benefit over caching.

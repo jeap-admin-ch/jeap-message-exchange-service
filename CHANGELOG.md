@@ -7,6 +7,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [12.1.0] - 2026-07-21
 
+### Fixed
+
+- S3 upload retries no longer fail with "Content input stream does not support mark/reset": bodies up to jeap.messageexchange.objectstorage.connection.upload-retry-memory-buffer-threshold (default 1MB) are buffered in memory so SDK retries work, larger streamed uploads fail fast with the actual S3 error
+
 ### Changed
 
 - Replaced LocalStack in the integration tests with RustFS as S3 emulator and Floci as SQS emulator

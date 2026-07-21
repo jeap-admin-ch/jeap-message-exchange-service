@@ -7,15 +7,17 @@ import ch.admin.bit.jeap.security.test.jws.JwsBuilder;
 import ch.admin.bit.jeap.security.test.jws.JwsBuilderFactory;
 import ch.admin.bit.jeap.security.test.resource.configuration.JeapOAuth2IntegrationTestResourceConfiguration;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,27 +33,19 @@ import static ch.admin.bit.jeap.messageexchange.web.api.HeaderNames.HEADER_MESSA
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Reproduces the production error
- * <pre>
- * java.lang.IllegalStateException: Content input stream does not support mark/reset, and was already read once.
- * </pre>
- * The MES streams the servlet request input stream directly to S3 ({@code ControllerStreams.getRequestContent} /
- * {@code S3ObjectStorageRepository.putObject}). When the first PUT attempt fails with a retryable error (e.g. a
- * transient 503 from the object storage), the AWS SDK retries the request, but the servlet input stream cannot be
- * re-read. The retry then fails with the above IllegalStateException, the real cause is masked, and the client
- * receives a 500 instead of the message being stored by the successful retry.
- * <p>
- * This test simulates the object storage with WireMock: the first PUT of the message content fails with a
- * transient 503 (SlowDown), every subsequent attempt succeeds. Expected behavior: storing the message succeeds
- * (via SDK retry or an equivalent recovery), i.e. the API responds with 201 and the object storage has received
- * a second, complete PUT attempt.
+ * Companion to {@link MessageExchangeS3TransientErrorRetryTest} for message bodies above the memory buffer
+ * threshold: those are streamed to S3 without buffering, so a transient S3 error cannot be retried by the SDK
+ * (the one-shot request stream cannot be re-read). Expected behavior: the upload fails fast on the first
+ * attempt with the actual S3 error - no retry, and in particular no misleading
+ * "Content input stream does not support mark/reset" IllegalStateException.
  */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
         properties = {
-                "server.port=8315",
+                "server.port=8316",
                 "jeap.messageexchange.kafka.topic.message-received=message-received",
                 "jeap.messaging.kafka.error-topic-name=error",
                 "jeap.messaging.kafka.system-name=test",
@@ -64,14 +58,14 @@ import static io.restassured.RestAssured.given;
                 "jeap.messageexchange.objectstorage.connection.region=aws-global",
                 "jeap.messageexchange.objectstorage.connection.access-key=test",
                 "jeap.messageexchange.objectstorage.connection.secret-key=test",
+                // force the streaming (non-buffered) upload path for the test message body
+                "jeap.messageexchange.objectstorage.connection.upload-retry-memory-buffer-threshold=16B",
                 // Avoid S3 lifecycle configuration calls at startup, they are irrelevant for this scenario
                 "jeap.messageexchange.housekeeping.enabled=false"
         })
 @ContextConfiguration(classes = {MessageExchangeApplication.class, JeapOAuth2IntegrationTestResourceConfiguration.class})
-class MessageExchangeS3TransientErrorRetryTest extends KafkaIntegrationTestBase {
-
-    private static final String TRANSIENT_ERROR_SCENARIO = "transient-s3-error";
-    private static final String FIRST_ATTEMPT_FAILED = "first-attempt-failed";
+@ExtendWith(OutputCaptureExtension.class)
+class MessageExchangeS3TransientErrorLargeUploadFailFastTest extends KafkaIntegrationTestBase {
 
     private static final WireMockServer S3_MOCK = new WireMockServer(wireMockConfig().dynamicPort());
 
@@ -117,25 +111,14 @@ class MessageExchangeS3TransientErrorRetryTest extends KafkaIntegrationTestBase 
         S3_MOCK.stubFor(head(urlPathMatching("/test-bucket-(internal|partner)"))
                 .willReturn(aResponse().withStatus(200)));
 
-        // First PUT of a message content fails with a transient, retryable S3 error
+        // Every PUT of a message content fails with a transient S3 error - only a single attempt is expected
         S3_MOCK.stubFor(put(urlPathMatching("/test-bucket-(internal|partner)/.+"))
-                .inScenario(TRANSIENT_ERROR_SCENARIO)
-                .whenScenarioStateIs(Scenario.STARTED)
-                .willSetStateTo(FIRST_ATTEMPT_FAILED)
                 .willReturn(aResponse()
                         .withStatus(503)
                         .withHeader("Content-Type", "application/xml")
                         .withBody("""
                                 <?xml version="1.0" encoding="UTF-8"?>
                                 <Error><Code>SlowDown</Code><Message>Please reduce your request rate.</Message></Error>""")));
-
-        // Any further PUT attempt succeeds
-        S3_MOCK.stubFor(put(urlPathMatching("/test-bucket-(internal|partner)/.+"))
-                .inScenario(TRANSIENT_ERROR_SCENARIO)
-                .whenScenarioStateIs(FIRST_ATTEMPT_FAILED)
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("ETag", "\"d41d8cd98f00b204e9800998ecf8427e\"")));
     }
 
     @BeforeEach
@@ -144,7 +127,7 @@ class MessageExchangeS3TransientErrorRetryTest extends KafkaIntegrationTestBase 
     }
 
     @Test
-    void putMessage_whenFirstS3PutAttemptFailsWithTransientError_thenMessageIsStoredOnRetry() {
+    void putLargeMessage_whenS3PutFailsWithTransientError_thenFailsFastWithActualCause(CapturedOutput output) {
         UUID messageId = UUID.randomUUID();
 
         given()
@@ -154,14 +137,17 @@ class MessageExchangeS3TransientErrorRetryTest extends KafkaIntegrationTestBase 
                 .header(HEADER_BP_ID, "myBpID")
                 .header(HEADER_MESSAGE_TYPE, "myMessageType")
                 .param("topicName", "topicName")
-                .body("<content>transient error test</content>")
+                .body("<content>" + "x".repeat(100) + "</content>") // above the 16B buffer threshold
                 .when()
                 .put("/api/internal/v3/messages/" + messageId)
                 .then()
-                .statusCode(HttpStatus.CREATED.value());
+                .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
 
-        // The first attempt received the 503, the retry must have delivered the content
-        S3_MOCK.verify(2, putRequestedFor(urlPathMatching("/test-bucket-(internal|partner)/.*" + messageId)));
+        // fail fast: exactly one attempt, no retry that cannot re-read the request stream
+        S3_MOCK.verify(1, putRequestedFor(urlPathMatching("/test-bucket-(internal|partner)/.*" + messageId)));
+        // the actual S3 error surfaces instead of the misleading mark/reset IllegalStateException
+        assertThat(output).doesNotContain("Content input stream does not support mark/reset");
+        assertThat(output).contains("Status Code: 503");
     }
 
     private String createAuthTokenForUserRoles(SemanticApplicationRole... userroles) {

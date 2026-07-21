@@ -12,6 +12,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.awscore.retry.AwsRetryStrategy;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
@@ -48,8 +49,11 @@ public class ObjectStorageConfiguration {
     }
 
     @Bean
-    public S3ObjectStorageRepository objectStorageRepository(S3Client s3Client, S3LifecycleConfigurationInitializer lifecycleConfigurationInitializer, S3ObjectStorageConnectionProperties s3ObjectStorageConnectionProperties) {
-        return new S3ObjectStorageRepository(s3Client, s3ObjectStorageConnectionProperties, housekeepingProperties, lifecycleConfigurationInitializer);
+    public S3ObjectStorageRepository objectStorageRepository(S3Client s3Client, S3LifecycleConfigurationInitializer lifecycleConfigurationInitializer, S3ObjectStorageConnectionProperties s3ObjectStorageConnectionProperties, AwsCredentialsProvider awsCredentialsProvider) {
+        // Deliberately not a bean (a second S3Client bean would make by-type injection ambiguous) and not
+        // container-managed: UrlConnectionHttpClient holds no connection pool, so not closing it is harmless.
+        S3Client noRetryS3Client = createNoRetryS3Client(s3ObjectStorageConnectionProperties, awsCredentialsProvider);
+        return new S3ObjectStorageRepository(s3Client, noRetryS3Client, s3ObjectStorageConnectionProperties, housekeepingProperties, lifecycleConfigurationInitializer);
     }
 
     @Bean
@@ -75,6 +79,21 @@ public class ObjectStorageConfiguration {
     }
 
     private S3Client createS3Client(S3ObjectStorageConnectionProperties connectionProperties, AwsCredentialsProvider awsCredentialsProvider) {
+        return s3ClientBuilder(connectionProperties, awsCredentialsProvider).build();
+    }
+
+    /**
+     * Client for streamed uploads whose one-shot request stream cannot be re-read: retries are disabled so a
+     * failed upload surfaces the actual S3 error instead of failing on the retry with
+     * "Content input stream does not support mark/reset".
+     */
+    private S3Client createNoRetryS3Client(S3ObjectStorageConnectionProperties connectionProperties, AwsCredentialsProvider awsCredentialsProvider) {
+        return s3ClientBuilder(connectionProperties, awsCredentialsProvider)
+                .overrideConfiguration(o -> o.retryStrategy(AwsRetryStrategy.doNotRetry()))
+                .build();
+    }
+
+    private S3ClientBuilder s3ClientBuilder(S3ObjectStorageConnectionProperties connectionProperties, AwsCredentialsProvider awsCredentialsProvider) {
         log.info("Initializing s3Client with connection properties {}", connectionProperties);
 
         S3Configuration serviceConfiguration = S3Configuration.builder()
@@ -101,7 +120,7 @@ public class ObjectStorageConfiguration {
             log.info("Overriding endpoint in S3Client to {}", accessUrl);
             s3ClientBuilder = s3ClientBuilder.endpointOverride(retrieveEndpointURI(accessUrl));
         }
-        return s3ClientBuilder.build();
+        return s3ClientBuilder;
     }
 
     private URI retrieveEndpointURI(String accessUrl) {

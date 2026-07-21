@@ -117,6 +117,6 @@ operations are implemented idempotently and are safe for client retries — see
 
 | Error class | Handling |
 | --- | --- |
-| Temporary error (DB connection, S3 temporarily unavailable) | Logged at WARN, retried; then logged at ERROR and answered with an appropriate error status |
+| Temporary error (DB connection, S3 temporarily unavailable) | Logged at WARN, retried; then logged at ERROR and answered with an appropriate error status. S3 upload retries only apply to bodies up to `upload-retry-memory-buffer-threshold` (default 1 MB), which are buffered in memory; larger bodies are streamed and fail fast with the actual S3 error — the client should retry the idempotent PUT |
 | Permanent error | Logged at ERROR, answered with an appropriate error status |
 | Failed malware scan result processing | Logged at ERROR, SQS message acknowledged (no redelivery); the message stays fail-closed |

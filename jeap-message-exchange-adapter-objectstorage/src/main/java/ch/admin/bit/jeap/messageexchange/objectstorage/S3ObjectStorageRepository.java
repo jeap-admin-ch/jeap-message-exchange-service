@@ -9,6 +9,9 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,12 +20,14 @@ import java.util.Map;
 @Slf4j
 public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository {
 
+    private final S3Client noRetryS3Client;
     private final S3ObjectStorageConnectionProperties connectionProperties;
     private final HousekeepingProperties housekeepingProperties;
     private final S3LifecycleConfigurationInitializer lifecycleConfigurationInitializer;
 
-    public S3ObjectStorageRepository(S3Client s3Client, S3ObjectStorageConnectionProperties connectionProperties, HousekeepingProperties housekeepingProperties, S3LifecycleConfigurationInitializer lifecycleConfigurationInitializer) {
+    public S3ObjectStorageRepository(S3Client s3Client, S3Client noRetryS3Client, S3ObjectStorageConnectionProperties connectionProperties, HousekeepingProperties housekeepingProperties, S3LifecycleConfigurationInitializer lifecycleConfigurationInitializer) {
         super(s3Client);
+        this.noRetryS3Client = noRetryS3Client;
         this.connectionProperties = connectionProperties;
         this.housekeepingProperties = housekeepingProperties;
         this.lifecycleConfigurationInitializer = lifecycleConfigurationInitializer;
@@ -67,10 +72,49 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
                 .tagging(tagging)
                 .contentLength(contentLength)
                 .build();
-        RequestBody requestBody = RequestBody.fromInputStream(messageContent.inputStream(), contentLength);
-        PutObjectResponse response = s3Client.putObject(putObjectRequest, requestBody);
+        PutObjectResponse response = upload(putObjectRequest, messageContent);
         String versionId = response.versionId();
         log.info("Object {}:{} with size {} uploaded to bucket {}.", objectKey, versionId == null ? "" : versionId, contentLength, bucketName);
+    }
+
+    private PutObjectResponse upload(PutObjectRequest putObjectRequest, MessageContent messageContent) {
+        InputStream inputStream = messageContent.inputStream();
+        int contentLength = messageContent.contentLength();
+        if (!connectionProperties.isUploadRetryFixEnabled()) {
+            // escape hatch: pre-12.1.0 behavior, an S3 retry cannot re-read the stream and fails with
+            // "Content input stream does not support mark/reset"
+            return s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, contentLength));
+        }
+        if (inputStream.markSupported()) {
+            // already re-readable (e.g. a request body buffered by the web layer), the SDK resets it on retry
+            return s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, contentLength));
+        }
+        if (contentLength <= connectionProperties.getUploadRetryMemoryBufferThreshold().toBytes()) {
+            return s3Client.putObject(putObjectRequest, RequestBody.fromBytes(readBodyFully(inputStream, contentLength)));
+        }
+        // a body above the buffer threshold is streamed without retries: the one-shot stream cannot be re-read,
+        // so the request fails fast with the actual S3 error and the client must retry the idempotent PUT
+        return noRetryS3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, contentLength));
+    }
+
+    private static byte[] readBodyFully(InputStream inputStream, int contentLength) {
+        // Reads exactly contentLength bytes without a trailing zero-length read: the stream may be a tee into
+        // the XML validator, which rejects further input once it has seen the declared content length.
+        try {
+            byte[] body = new byte[contentLength];
+            int bytesRead = 0;
+            while (bytesRead < contentLength) {
+                int count = inputStream.read(body, bytesRead, contentLength - bytesRead);
+                if (count < 0) {
+                    throw new IllegalStateException(
+                            "Request body ended prematurely: expected %d bytes but read %d".formatted(contentLength, bytesRead));
+                }
+                bytesRead += count;
+            }
+            return body;
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to read request body", e);
+        }
     }
 
     /**

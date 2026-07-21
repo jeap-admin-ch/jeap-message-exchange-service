@@ -57,6 +57,12 @@ jeap:
         bucket-name-partner: my-mes-partner-bucket    # inbound messages
         bucket-name-internal: my-mes-internal-bucket  # outbound messages
         # access-url / access-key / secret-key: only for S3-compatible storage outside AWS
+        s3-timeout: 30s                               # optional S3 connect/socket timeout, default 30s
+        upload-retry-memory-buffer-threshold: 1MB     # optional, default 1MB: bodies up to this size are
+                                                      # buffered in memory so transient S3 errors are retried;
+                                                      # larger bodies are streamed and fail fast (see Operations)
+        upload-retry-fix-enabled: true                # optional escape hatch, default true; false restores the
+                                                      # pre-12.1.0 streaming-only upload behavior
     housekeeping:
       expiration-days: 14   # retention period, default 14 days (see Operations)
     malwarescan:
