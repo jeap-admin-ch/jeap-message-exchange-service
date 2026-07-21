@@ -5,6 +5,7 @@ import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
@@ -13,6 +14,7 @@ import javax.sql.DataSource;
 @AutoConfiguration
 @EnableTransactionManagement
 @ComponentScan
+@PropertySource("classpath:messageExchangePersistenceDefaultProperties.properties")
 public class PersistenceConfiguration {
 
     @Bean
