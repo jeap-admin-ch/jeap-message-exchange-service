@@ -113,7 +113,6 @@ Apache License Version 2.0
  * Spring Cloud AWS SQS - [io.awspring.cloud:spring-cloud-aws-sqs](https://spring.io/spring-cloud/spring-cloud-aws/spring-cloud-aws-sqs)
  * Spring Cloud AWS Starter - [io.awspring.cloud:spring-cloud-aws-starter](https://spring.io/spring-cloud/spring-cloud-aws/spring-cloud-aws-starters/spring-cloud-aws-starter)
  * Spring Cloud AWS SQS Starter - [io.awspring.cloud:spring-cloud-aws-starter-sqs](https://spring.io/spring-cloud/spring-cloud-aws/spring-cloud-aws-starters/spring-cloud-aws-starter-sqs)
- * Spring Cloud AWS Testcontainers - [io.awspring.cloud:spring-cloud-aws-testcontainers](https://spring.io/spring-cloud/spring-cloud-aws/spring-cloud-aws-testcontainers)
  * utils - [io.confluent:common-utils](https://confluent.io/common-utils)
  * kafka-avro-serializer - [io.confluent:kafka-avro-serializer](http://confluent.io/kafka-avro-serializer)
  * kafka-schema-registry-client - [io.confluent:kafka-schema-registry-client](http://confluent.io/kafka-schema-registry-client)
@@ -563,6 +562,7 @@ MIT License
  * minimal-json - [com.eclipsesource.minimal-json:minimal-json](https://github.com/ralfstx/minimal-json)
  * Java SemVer - [com.github.zafarkhaja:java-semver](https://github.com/zafarkhaja/jsemver)
  * semver4j - [com.vdurmont:semver4j](https://github.com/vdurmont/semver4j)
+ * Testcontainers Floci - [io.floci:testcontainers-floci](https://github.com/floci-io/testcontainers-floci/testcontainers-floci)
  * ClassGraph - [io.github.classgraph:classgraph](https://github.com/classgraph/classgraph)
  * ClassGraph - [io.github.classgraph:classgraph](https://github.com/classgraph/classgraph)
  * toml4j - [io.hotmoka:toml4j](http://moandjiezana.com/toml/toml4j)
@@ -584,7 +584,6 @@ MIT License
  * Testcontainers :: Database-Commons - [org.testcontainers:testcontainers-database-commons](https://java.testcontainers.org)
  * Testcontainers :: JDBC - [org.testcontainers:testcontainers-jdbc](https://java.testcontainers.org)
  * Testcontainers :: JUnit Jupiter Extension - [org.testcontainers:testcontainers-junit-jupiter](https://java.testcontainers.org)
- * Testcontainers :: Localstack - [org.testcontainers:testcontainers-localstack](https://java.testcontainers.org)
  * Testcontainers :: JDBC :: PostgreSQL - [org.testcontainers:testcontainers-postgresql](https://java.testcontainers.org)
  * webjars-locator-lite - [org.webjars:webjars-locator-lite](https://webjars.org)
 
