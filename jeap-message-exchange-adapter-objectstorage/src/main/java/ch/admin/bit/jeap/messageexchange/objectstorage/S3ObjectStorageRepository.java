@@ -80,7 +80,7 @@ public class S3ObjectStorageRepository extends S3ObjectStorageReadOnlyRepository
     private PutObjectResponse upload(PutObjectRequest putObjectRequest, MessageContent messageContent) {
         InputStream inputStream = messageContent.inputStream();
         int contentLength = messageContent.contentLength();
-        if (!connectionProperties.isUploadRetryFixEnabled()) {
+        if (!connectionProperties.isUploadBufferingEnabled()) {
             // escape hatch: pre-12.1.0 behavior, an S3 retry cannot re-read the stream and fails with
             // "Content input stream does not support mark/reset"
             return s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, contentLength));

@@ -65,7 +65,7 @@ public class S3ObjectStorageConnectionProperties {
      * request stream and fails with "Content input stream does not support mark/reset".
      */
     @Setter
-    private boolean uploadRetryFixEnabled = true;
+    private boolean uploadBufferingEnabled = true;
 
     public void setRegion(String region) {
         this.region = Region.of(region);

@@ -101,8 +101,8 @@ class S3ObjectStorageRepositoryPutObjectRoutingTest {
     }
 
     @Test
-    void putObject_fixDisabled_streamsThroughRetryingClient() {
-        properties.setUploadRetryFixEnabled(false);
+    void putObject_bufferingDisabled_streamsThroughRetryingClient() {
+        properties.setUploadBufferingEnabled(false);
         byte[] content = "x".repeat((int) THRESHOLD_BYTES + 1).getBytes(UTF_8);
         MessageContent messageContent = new MessageContent(nonMarkStream(content), content.length);
 
