@@ -46,7 +46,7 @@
         <sonar.coverage.exclusions>**/Pacticipants.java,**/PactProviderTestBase.java</sonar.coverage.exclusions>
         <aalto-xml.version>1.4.0</aalto-xml.version>
         <commons-io.version>2.22.0</commons-io.version>
-        <wiremock-standalone.version>3.13.2</wiremock-standalone.version>
+        <wiremock-spring-boot.version>4.2.2</wiremock-spring-boot.version>
         <testcontainers-floci.version>2.11.0</testcontainers-floci.version>
     </properties>
 
@@ -127,9 +127,9 @@
                 <version>${commons-io.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.wiremock</groupId>
-                <artifactId>wiremock-standalone</artifactId>
-                <version>${wiremock-standalone.version}</version>
+                <groupId>org.wiremock.integrations</groupId>
+                <artifactId>wiremock-spring-boot-standalone</artifactId>
+                <version>${wiremock-spring-boot.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>

@@ -25,6 +25,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import java.util.UUID;
 
@@ -69,7 +70,7 @@ class MessageExchangeS3TransientErrorLargeUploadFailFastTest extends KafkaIntegr
 
     private static final WireMockServer S3_MOCK = new WireMockServer(wireMockConfig().dynamicPort());
 
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine").asCompatibleSubstituteFor("postgres"));
 
     @LocalServerPort
     int serverPort;

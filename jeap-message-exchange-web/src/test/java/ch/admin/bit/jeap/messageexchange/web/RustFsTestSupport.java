@@ -25,7 +25,8 @@ public final class RustFsTestSupport {
      * Creates a RustFS container providing an S3-compatible object storage for tests.
      */
     public static GenericContainer<?> createRustFsContainer() {
-        return new GenericContainer<>(DockerImageName.parse(RUSTFS_IMAGE))
+        return new GenericContainer<>(DockerImageName.parse(RUSTFS_IMAGE)
+                .asCompatibleSubstituteFor("rustfs/rustfs"))
                 .withExposedPorts(RUSTFS_PORT)
                 .withEnv("RUSTFS_ACCESS_KEY", RUSTFS_ACCESS_KEY)
                 .withEnv("RUSTFS_SECRET_KEY", RUSTFS_SECRET_KEY)

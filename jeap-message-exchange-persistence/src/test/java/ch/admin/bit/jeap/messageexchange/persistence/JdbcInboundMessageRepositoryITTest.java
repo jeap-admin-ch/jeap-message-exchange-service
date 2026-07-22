@@ -17,6 +17,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
@@ -52,7 +53,7 @@ class JdbcInboundMessageRepositoryITTest {
     @MockitoBean
     @SuppressWarnings("unused")
     private EventPublisher eventPublisher;
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine").asCompatibleSubstituteFor("postgres"));
 
     @BeforeAll
     static void startContainers() {
