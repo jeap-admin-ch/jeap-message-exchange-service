@@ -33,7 +33,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [11.0.0] - 2026-07-15
 
-See [docs/scan-status-in-database-11.0.0.md](docs/scan-status-in-database-11.0.0.md) for details and upgrade steps.
+See [docs/scan-status-in-database.md](docs/scan-status-in-database.md) for details and upgrade steps.
 
 ### Changed
 

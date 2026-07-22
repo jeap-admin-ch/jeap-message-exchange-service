@@ -16,7 +16,7 @@ own MES instance by depending on this project and adding configuration.
 - [REST API](docs/rest-api.md) — partner and internal API, authorization
 - [Malware Scanning](docs/malware-scanning.md) — scan status lifecycle, configuration, S3 object versions
 - [Operations](docs/operations.md) — housekeeping, monitoring, logging, error handling
-- [11.0.0 upgrade notes](docs/scan-status-in-database-11.0.0.md) — scan status moved from S3 tags to
+- [11.0.0 upgrade notes](docs/scan-status-in-database.md) — scan status moved from S3 tags to
   PostgreSQL
 
 ## Versioning

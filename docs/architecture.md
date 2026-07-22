@@ -97,7 +97,7 @@ erDiagram
 - `inbound_message` records **inbound** messages (partner to internal application). Since 11.0.0 it is the
   single source of truth for inbound message metadata and the malware scan status
   (see [Malware Scanning](malware-scanning.md) and
-  [the 11.0.0 upgrade notes](scan-status-in-database-11.0.0.md)).
+  [the 11.0.0 upgrade notes](scan-status-in-database.md)).
 - S3 objects: inbound payloads are stored in the partner bucket under the key `messageId`; outbound payloads
   in the internal bucket under `bpId/messageId`.
 - Scan-status reads and updates target the newest `inbound_message` row for a `messageId` (greatest
@@ -138,4 +138,4 @@ deployment consists of:
   rejected because it would break persistence compatibility for no benefit over caching.
 - **PostgreSQL instead of S3 tags as the source of truth for the inbound scan status** (11.0.0): S3 object
   tagging is a full-replace API and lost updates against GuardDuty's tagging were unavoidable. See
-  [the 11.0.0 upgrade notes](scan-status-in-database-11.0.0.md) for the full reasoning and migration path.
+  [the 11.0.0 upgrade notes](scan-status-in-database.md) for the full reasoning and migration path.

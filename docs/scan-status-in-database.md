@@ -2,10 +2,12 @@
 
 This document describes the breaking change introduced with jeap-message-exchange-service (MES) 11.0.0,
 why it was made, how it behaves during and after the upgrade, and the steps operators need to perform.
+Installations still on a version smaller than 11 should upgrade directly to the current MES version (12.1.x or later); the steps
+below are written for that upgrade.
 
 ## Why
 
-MES up to 10.x stored the metadata of partner (inbound) messages — `bpId`, `messageType`, `partnerTopic`,
+MES versions smaller than 11 stored the metadata of partner (inbound) messages — `bpId`, `messageType`, `partnerTopic`,
 `partnerExternalReference`, the malware `scanStatus` and `saveTimeInMillis` — as S3 object tags, and updated the
 `scanStatus` tag after each malware scan result using `PutObjectTagging`.
 
@@ -28,14 +30,14 @@ clean scan was already published (JEAP-7230).
   using `jeap.datasource.replica.enabled=true` are not affected by replication lag in these flows.
 - **S3 object tags are no longer authoritative.** Message delivery and event publication are based solely on
   the database. While the legacy tag compatibility is enabled (see below), MES still writes and updates the
-  tags exactly like 10.x did — but a lost tag update can no longer block a message on 11.x instances. Once the
+  tags exactly like MES < 11 did — but a lost tag update can no longer block a message on upgraded instances. Once the
   compatibility is disabled, tags are written exactly once, atomically within the `PutObject` request at
   object creation (the lifecycle tag), and never updated.
 - **Backwards compatibility (tag fallback).** For messages stored by MES &lt; 11.0.0 whose information is
   missing in PostgreSQL, the S3 tags are read as a fallback and the database record is backfilled when a scan
   result arrives. This fallback will be removed with the contract story **JEAP-7252**.
 - **Self-healing during rolling deployments.** When the database still says `SCAN_PENDING` at delivery time,
-  MES consults the object tags: a terminal `scanStatus` written by a 10.x instance that processed the scan
+  MES consults the object tags: a terminal `scanStatus` written by an MES < 11 instance that processed the scan
   result is adopted into the database (only while the row is still pending — a concurrently written database
   status always wins over the tag), and delivery proceeds accordingly. Messages that got stuck in
   `SCAN_PENDING` because of the tagging race in **earlier versions** (the verdict survives only in the
@@ -50,18 +52,18 @@ clean scan was already published (JEAP-7230).
   For legacy messages without a database record, correct the `scanStatus` object tag instead (e.g. with the
   AWS CLI `put-object-tagging`, keeping all other tags).
 
-## Zero-downtime deployments with mixed 10.x / 11.x instances
+## Zero-downtime deployments with mixed MES < 11 and upgraded instances
 
 Rolling deployments distribute HTTP requests and malware scan results (SQS) randomly across old and new
-instances. To keep this safe, 11.0.0 by default keeps the complete 10.x tagging behavior: the metadata tags
+instances. To keep this safe, 11.0.0 by default keeps the complete MES < 11 tagging behavior: the metadata tags
 are written to new S3 objects at creation, and each malware scan result also updates the `scanStatus` tag
-exactly like 10.x did. Old instances can therefore gate message delivery and process malware scan results for
+exactly like MES < 11 did. Old instances can therefore gate message delivery and process malware scan results for
 messages uploaded by new instances (and vice versa) without any behavior change during the deployment window.
-This also makes a rollback from 11.x to 10.x safe.
+This also makes a rollback to MES < 11 safe.
 
-Note that the transitional `scanStatus` tag update uses the same full-replace tagging API as 10.x and can
-therefore still be raced by the GuardDuty tagging. On 11.x instances such a lost tag update is harmless —
-delivery is gated by the database — so the race can only affect GETs served by 10.x instances during the
+Note that the transitional `scanStatus` tag update uses the same full-replace tagging API as MES < 11 and can
+therefore still be raced by the GuardDuty tagging. On upgraded instances such a lost tag update is harmless —
+delivery is gated by the database — so the race can only affect GETs served by MES < 11 instances during the
 deployment window, which is exactly the pre-upgrade status quo.
 
 ## Upgrade steps
@@ -71,11 +73,12 @@ the upgrade.
 
 ### Malware scanning was enabled before the upgrade
 
-1. **Deploy 11.x with the default configuration** (rolling deployment is fine). The transitional tag writing
-   is enabled by default (`jeap.messageexchange.legacy-tag-compatibility.enabled=true`); the database
-   migrations `V7`-`V9` run automatically and are compatible with running 10.x instances (additive nullable
-   columns, indexes created concurrently).
-2. **After all instances run 11.x**, disable the transitional tag writing:
+1. **Deploy the current MES version (12.1.x or later) with the default configuration** (rolling deployment
+   is fine). The transitional tag writing is enabled by default
+   (`jeap.messageexchange.legacy-tag-compatibility.enabled=true`); the database migrations `V7`-`V9` run
+   automatically and are compatible with running MES < 11 instances (additive nullable columns, indexes created
+   concurrently).
+2. **After all instances run the upgraded version**, disable the transitional tag writing:
 
    ```yaml
    jeap:
@@ -86,7 +89,7 @@ the upgrade.
 
    From then on, new S3 objects carry only the `MessageExchangeLifecyclePolicy` tag, and malware scan results
    no longer update object tags — the GuardDuty tagging race is then structurally impossible. Do **not**
-   disable the property while 10.x instances are still running — they depend on the metadata tags.
+   disable the property while MES < 11 instances are still running — they depend on the metadata tags.
 3. **Nothing else to do.** The read-only tag fallback and the healing logic stay active regardless of the
    property and will be removed, together with the property and the transitional tag writing, by the contract
    story **JEAP-7252** in a future major release.
@@ -97,7 +100,7 @@ Without malware scanning there are no scan results and no scan status gating, so
 serves no purpose and can be switched off from the start:
 
 1. **Disable the transitional tag writing directly before the upgrade** by adding the following configuration
-   together with the 11.x deployment:
+   together with the upgrade deployment:
 
    ```yaml
    jeap:
@@ -106,10 +109,20 @@ serves no purpose and can be switched off from the start:
          enabled: false
    ```
 
-2. **Deploy 11.x** (rolling deployment is fine; the database migrations `V7`-`V9` run automatically). New S3
-   objects carry only the `MessageExchangeLifecyclePolicy` tag from the first 11.x instance on.
+2. **Deploy the current MES version (12.1.x or later)** (rolling deployment is fine; the database migrations
+   `V7`-`V9` run automatically). New S3 objects carry only the `MessageExchangeLifecyclePolicy` tag from the
+   first upgraded instance on.
 3. **Nothing else to do.** The read-only tag fallback stays active regardless of the property, so messages
-   stored by 10.x instances remain readable.
+   stored by MES < 11 instances remain readable.
+
+### Message body handling options (since 12.1.0)
+
+Upgrading also brings the retry-safe upload handling introduced with 12.1.0: message bodies up to
+`jeap.messageexchange.objectstorage.connection.upload-retry-memory-buffer-threshold` (default 1MB) are
+buffered in memory so transient S3 errors are retried by the AWS SDK; larger bodies are streamed to S3
+without buffering and fail fast with the actual S3 error, relying on the client retrying the idempotent PUT.
+The defaults require no action — see [Getting Started](getting-started.md) for the configuration and
+[Operations](operations.md) for the error-handling behavior.
 
 ## Behavior changes to be aware of
 
@@ -133,4 +146,6 @@ serves no purpose and can be switched off from the start:
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `jeap.messageexchange.legacy-tag-compatibility.enabled` | `true` | Keep the 10.x tagging behavior: write the metadata tags expected by MES &lt; 11.0.0 to new S3 objects and update the scanStatus tag after malware scan results. With malware scanning enabled, keep enabled until all instances run 11.x; with malware scanning disabled, disable it directly before the upgrade. Removed with JEAP-7252. |
+| `jeap.messageexchange.legacy-tag-compatibility.enabled` | `true` | Keep the MES &lt; 11 tagging behavior: write the metadata tags expected by MES &lt; 11.0.0 to new S3 objects and update the scanStatus tag after malware scan results. With malware scanning enabled, keep enabled until all instances run the upgraded version; with malware scanning disabled, disable it directly before the upgrade. Removed with JEAP-7252. |
+| `jeap.messageexchange.objectstorage.connection.upload-retry-memory-buffer-threshold` | `1MB` | Message bodies up to this size are buffered in memory before the S3 upload, so transient S3 errors are retried by the AWS SDK. Larger bodies are streamed without buffering and fail fast with the actual S3 error. |
+| `jeap.messageexchange.objectstorage.connection.upload-buffering-enabled` | `true` | When disabled, every message body is streamed directly to S3, where transient S3 errors cannot be retried. Only disable to rule out the upload buffering as a problem cause. |

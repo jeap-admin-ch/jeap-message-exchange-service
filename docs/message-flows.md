@@ -58,7 +58,7 @@ sequenceDiagram
 ```
 
 *Legacy metadata tags are written only while
-[legacy tag compatibility](scan-status-in-database-11.0.0.md) is enabled, and always atomically within the
+[legacy tag compatibility](scan-status-in-database.md) is enabled, and always atomically within the
 `PutObject` request — never with a separate tagging call that could race with GuardDuty.
 
 ### Ordering: why S3 before the database for new messages — but not for re-stores
@@ -156,7 +156,7 @@ sequenceDiagram
     alt row with scanStatus found
         MES->>MES: content type check (row, fallback: S3 head)
         opt scanStatus = SCAN_PENDING
-            MES->>S3: read tags - heal a terminal verdict written<br/>by a 10.x instance into the row
+            MES->>S3: read tags - heal a terminal verdict written<br/>by an instance running a version smaller than 11 into the row
         end
         MES->>MES: delivery gate on scanStatus
         alt deliverable
