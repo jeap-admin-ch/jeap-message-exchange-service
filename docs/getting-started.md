@@ -61,8 +61,8 @@ jeap:
         upload-retry-memory-buffer-threshold: 1MB     # optional, default 1MB: bodies up to this size are
                                                       # buffered in memory so transient S3 errors are retried;
                                                       # larger bodies are streamed and fail fast (see Operations)
-        upload-buffering-enabled: true                # optional escape hatch, default true; false restores the
-                                                      # pre-12.1.0 streaming-only upload behavior
+        upload-buffering-enabled: true                # optional, default true; false streams every body directly
+                                                      # to S3, where transient S3 errors cannot be retried
     housekeeping:
       expiration-days: 14   # retention period, default 14 days (see Operations)
     malwarescan:

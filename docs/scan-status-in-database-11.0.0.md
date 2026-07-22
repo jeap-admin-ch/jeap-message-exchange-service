@@ -66,6 +66,11 @@ deployment window, which is exactly the pre-upgrade status quo.
 
 ## Upgrade steps
 
+The steps depend on whether malware scanning (`jeap.messageexchange.malwarescan.enabled`) was enabled before
+the upgrade.
+
+### Malware scanning was enabled before the upgrade
+
 1. **Deploy 11.x with the default configuration** (rolling deployment is fine). The transitional tag writing
    is enabled by default (`jeap.messageexchange.legacy-tag-compatibility.enabled=true`); the database
    migrations `V7`-`V9` run automatically and are compatible with running 10.x instances (additive nullable
@@ -85,6 +90,26 @@ deployment window, which is exactly the pre-upgrade status quo.
 3. **Nothing else to do.** The read-only tag fallback and the healing logic stay active regardless of the
    property and will be removed, together with the property and the transitional tag writing, by the contract
    story **JEAP-7252** in a future major release.
+
+### Malware scanning was disabled before the upgrade
+
+Without malware scanning there are no scan results and no scan status gating, so the transitional tag writing
+serves no purpose and can be switched off from the start:
+
+1. **Disable the transitional tag writing directly before the upgrade** by adding the following configuration
+   together with the 11.x deployment:
+
+   ```yaml
+   jeap:
+     messageexchange:
+       legacy-tag-compatibility:
+         enabled: false
+   ```
+
+2. **Deploy 11.x** (rolling deployment is fine; the database migrations `V7`-`V9` run automatically). New S3
+   objects carry only the `MessageExchangeLifecyclePolicy` tag from the first 11.x instance on.
+3. **Nothing else to do.** The read-only tag fallback stays active regardless of the property, so messages
+   stored by 10.x instances remain readable.
 
 ## Behavior changes to be aware of
 
@@ -108,4 +133,4 @@ deployment window, which is exactly the pre-upgrade status quo.
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `jeap.messageexchange.legacy-tag-compatibility.enabled` | `true` | Keep the 10.x tagging behavior: write the metadata tags expected by MES &lt; 11.0.0 to new S3 objects and update the scanStatus tag after malware scan results. Keep enabled until all instances run 11.x. Removed with JEAP-7252. |
+| `jeap.messageexchange.legacy-tag-compatibility.enabled` | `true` | Keep the 10.x tagging behavior: write the metadata tags expected by MES &lt; 11.0.0 to new S3 objects and update the scanStatus tag after malware scan results. With malware scanning enabled, keep enabled until all instances run 11.x; with malware scanning disabled, disable it directly before the upgrade. Removed with JEAP-7252. |

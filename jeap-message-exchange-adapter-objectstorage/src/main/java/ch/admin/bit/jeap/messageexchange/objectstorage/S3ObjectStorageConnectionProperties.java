@@ -60,9 +60,10 @@ public class S3ObjectStorageConnectionProperties {
     private DataSize uploadRetryMemoryBufferThreshold = DataSize.ofMegabytes(1);
 
     /**
-     * Emergency escape hatch: set to false to restore the pre-12.1.0 upload behavior, where every message body is
-     * streamed directly to S3 through the retrying S3 client. With that behavior, an S3 retry cannot re-read the
-     * request stream and fails with "Content input stream does not support mark/reset".
+     * When disabled, every message body is streamed directly to S3 through the retrying S3 client, regardless of
+     * its size. With that behavior, an S3 retry cannot re-read the request stream and fails with
+     * "Content input stream does not support mark/reset". Only disable to rule out the upload buffering as a
+     * problem cause.
      */
     @Setter
     private boolean uploadBufferingEnabled = true;
