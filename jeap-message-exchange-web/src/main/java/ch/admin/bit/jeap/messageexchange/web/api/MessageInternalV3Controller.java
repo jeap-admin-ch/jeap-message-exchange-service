@@ -48,7 +48,7 @@ public class MessageInternalV3Controller {
             requestBody = @RequestBody(description = "Message",
                     required = true, content = @Content(mediaType = "*/*", schema = @Schema(name = "string"))))
     @PreAuthorize(Roles.HAS_ROLE_WRITE_MESSAGE_OUT)
-    @Timed(value = "jeap_mes_internal_controller_send_message", description = "Time taken to send a message", percentiles = {0.5, 0.8, 0.95, 0.99})
+    @Timed(value = "jeap_mes_internal_controller_send_message", description = "Time taken to send a message", extraTags = {"api", "internal_v3"}, percentiles = {0.5, 0.8, 0.95, 0.99})
     public ResponseEntity<Void> sendMessage(
             @PathVariable("messageId") @Parameter(description = "Message identification as UUID 12345678-1234-1234-1234-123456789012") UUID messageId,
             @RequestHeader(value = HEADER_BP_ID) @Parameter(description = "Receiving partner identification") String bpId,
@@ -95,7 +95,7 @@ public class MessageInternalV3Controller {
             responses = @ApiResponse(responseCode = "403", description = "Not delivering because of the malware scan status")
     )
     @PreAuthorize(Roles.HAS_ROLE_READ_MESSAGE_IN)
-    @Timed(value = "jeap_mes_internal_controller_get_message", description = "Time taken to retrieve a message", percentiles = {0.5, 0.8, 0.95, 0.99})
+    @Timed(value = "jeap_mes_internal_controller_get_message", description = "Time taken to retrieve a message", extraTags = {"api", "internal_v3"}, percentiles = {0.5, 0.8, 0.95, 0.99})
     public ResponseEntity<InputStreamResource> getMessage(@PathVariable("messageId") @Parameter(description = "Message identification as UUID 12345678-1234-1234-1234-123456789012") UUID messageId,
                                                           @RequestHeader(HttpHeaders.ACCEPT) @Parameter(description = "Content-Type of the message body") String accept) throws MismatchedContentTypeException {
         try (var _ = MessageIdBpIdMdcCloseable.mdcMessageId(messageId)) {

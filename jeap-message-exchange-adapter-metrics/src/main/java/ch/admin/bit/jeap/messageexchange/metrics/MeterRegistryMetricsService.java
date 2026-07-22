@@ -1,8 +1,10 @@
 package ch.admin.bit.jeap.messageexchange.metrics;
 
+import ch.admin.bit.jeap.messageexchange.domain.malwarescan.MalwareScanProperties;
 import ch.admin.bit.jeap.messageexchange.domain.metrics.MetricsService;
 import ch.admin.bit.jeap.messageexchange.malware.api.MalwareScanResult;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,8 +25,13 @@ public class MeterRegistryMetricsService implements MetricsService {
     private final Map<MalwareScanResult, Counter> scanResultsCounter;
     private final MeterRegistry meterRegistry;
 
-    public MeterRegistryMetricsService(MeterRegistry meterRegistry, @Value("${spring.application.name}") String applicationName) {
+    public MeterRegistryMetricsService(MeterRegistry meterRegistry, MalwareScanProperties malwareScanProperties,
+                                       @Value("${spring.application.name}") String applicationName) {
         this.meterRegistry = meterRegistry;
+        Gauge.builder("jeap_mes_malware_scan_enabled", malwareScanProperties, properties -> properties.isEnabled() ? 1.0 : 0.0)
+                .description("Whether the malware scan is enabled (1) or disabled (0)")
+                .tags("applicationName", applicationName)
+                .register(meterRegistry);
         malwareScanDurationTimer = Timer.builder("jeap_mes_malware_scan_duration_timer")
                 .description("A timer to track durations of malware scans")
                 .tags("applicationName", applicationName)

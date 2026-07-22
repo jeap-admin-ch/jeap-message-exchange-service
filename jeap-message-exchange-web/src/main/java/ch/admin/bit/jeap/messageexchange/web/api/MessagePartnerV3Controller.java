@@ -59,7 +59,7 @@ public class MessagePartnerV3Controller {
                     required = true, content = @Content(mediaType = MediaType.APPLICATION_XML_VALUE,
                     schema = @Schema(name = "anyxml"))))
     @PreAuthorize(Roles.HAS_ROLE_WRITE_MESSAGE_IN)
-    @Timed(value = "jeap_mes_partner_controller_send_message", description = "Time taken to save a message", percentiles = {0.5, 0.8, 0.95, 0.99})
+    @Timed(value = "jeap_mes_partner_controller_send_message", description = "Time taken to save a message", extraTags = {"api", "partner_v3"}, percentiles = {0.5, 0.8, 0.95, 0.99})
     public ResponseEntity<Void> sendMessage(
             @PathVariable(MESSAGE_ID) @Parameter(description = "Unique message identification as UUID: cc7d5097-4d3f-4fff-af91-fd3680199642") UUID messageId,
             @RequestHeader(HEADER_BP_ID) @Parameter(description = "Partner identification") String bpId,
@@ -78,7 +78,7 @@ public class MessagePartnerV3Controller {
     @GetMapping(value = "", produces = MediaType.APPLICATION_XML_VALUE)
     @Operation(summary = "Returns a list of messages for the given BP (Business Partner), topicName and / or groupId")
     @PreAuthorize(Roles.HAS_ROLE_READ_MESSAGE_OUT)
-    @Timed(value = "jeap_mes_partner_controller_get_messages", description = "Time taken to retrieve a list of messages", percentiles = {0.5, 0.8, 0.95, 0.99})
+    @Timed(value = "jeap_mes_partner_controller_get_messages", description = "Time taken to retrieve a list of messages", extraTags = {"api", "partner_v3"}, percentiles = {0.5, 0.8, 0.95, 0.99})
     public MessagesResultDto getMessages(
             @RequestHeader(HEADER_BP_ID) @Parameter(description = "Partner identification") String bpId,
             @RequestParam(value = QUERY_PARAM_TOPIC_NAME, required = false) @Parameter(description = "Get only messages from given topicName") String topicName,
@@ -103,7 +103,7 @@ public class MessagePartnerV3Controller {
     @GetMapping(value = "/{messageId}", produces = MediaType.APPLICATION_XML_VALUE)
     @Operation(summary = "Get message")
     @PreAuthorize(Roles.HAS_ROLE_READ_MESSAGE_OUT)
-    @Timed(value = "jeap_mes_partner_controller_get_message", description = "Time taken to retrieve a message", percentiles = {0.5, 0.8, 0.95, 0.99})
+    @Timed(value = "jeap_mes_partner_controller_get_message", description = "Time taken to retrieve a message", extraTags = {"api", "partner_v3"}, percentiles = {0.5, 0.8, 0.95, 0.99})
     public ResponseEntity<InputStreamResource> getMessage(
             @PathVariable(MESSAGE_ID) @Parameter(description = "Unique message identification as UUID: cc7d5097-4d3f-4fff-af91-fd3680199642") UUID messageId,
             @RequestHeader(HEADER_BP_ID) @Parameter(description = "Partner identification") String bpId
@@ -121,7 +121,7 @@ public class MessagePartnerV3Controller {
     @GetMapping(value = "/{messageId}/next", produces = MediaType.APPLICATION_XML_VALUE)
     @Operation(summary = "Get next message")
     @PreAuthorize(Roles.HAS_ROLE_READ_MESSAGE_OUT)
-    @Timed(value = "jeap_mes_partner_controller_get_next_message", description = "Time taken to retrieve the next message", percentiles = {0.5, 0.8, 0.95, 0.99})
+    @Timed(value = "jeap_mes_partner_controller_get_next_message", description = "Time taken to retrieve the next message", extraTags = {"api", "partner_v3"}, percentiles = {0.5, 0.8, 0.95, 0.99})
     public ResponseEntity<InputStreamResource> getNextMessage(
             @PathVariable(MESSAGE_ID) @Parameter(description = "Unique message identification as UUID: cc7d5097-4d3f-4fff-af91-fd3680199642") UUID lastMessageId,
             @RequestHeader(HEADER_BP_ID) @Parameter(description = "Partner identification") String bpId,

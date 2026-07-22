@@ -36,6 +36,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
@@ -99,7 +100,7 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
     @Autowired
     private MessageRepository messageRepository;
 
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:17-alpine").asCompatibleSubstituteFor("postgres"));
 
     @BeforeAll
     static void startContainers() {
@@ -541,9 +542,12 @@ class MessageExchangeInteractionPartnerApiV4Test extends KafkaIntegrationTestBas
                 .assertThat()
                 .statusCode(200)
                 .body(containsString("jeap_mes_partner_controller_send_message"))
+                .body(containsString("api=\"partner_v4\""))
                 .body(containsString("jeap_mes_internal_controller_get_message"))
+                .body(containsString("api=\"internal_v3\""))
                 .body(containsString("jeap_mes_repository_get_next_message_id"))
                 .body(containsString("jeap_mes_objectstore_put"))
-                .body(containsString("jeap_mes_objectstore_get"));
+                .body(containsString("jeap_mes_objectstore_get"))
+                .body(containsString("jeap_mes_malware_scan_enabled"));
     }
 }
