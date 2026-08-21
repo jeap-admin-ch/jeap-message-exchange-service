@@ -92,6 +92,7 @@ Apache License Version 2.0
  * Jimfs - [com.google.jimfs:jimfs](https://github.com/google/jimfs/jimfs)
  * json-path - [com.jayway.jsonpath:json-path](https://github.com/jayway/JsonPath)
  * JsonSchemaValidator - [com.networknt:json-schema-validator](https://github.com/networknt/json-schema-validator)
+ * JsonSchemaValidator - [com.networknt:json-schema-validator](https://github.com/networknt/json-schema-validator)
  * Nimbus Content Type - [com.nimbusds:content-type](https://bitbucket.org/connect2id/nimbus-content-type)
  * Nimbus LangTag - [com.nimbusds:lang-tag](https://bitbucket.org/connect2id/nimbus-language-tags)
  * Nimbus JOSE+JWT - [com.nimbusds:nimbus-jose-jwt](https://bitbucket.org/connect2id/nimbus-jose-jwt)
