@@ -78,7 +78,6 @@ Apache License Version 2.0
  * FindBugs-jsr305 - [com.google.code.findbugs:jsr305](http://findbugs.sourceforge.net/)
  * Gson - [com.google.code.gson:gson](https://github.com/google/gson)
  * error-prone annotations - [com.google.errorprone:error_prone_annotations](https://errorprone.info/error_prone_annotations)
- * error-prone annotations - [com.google.errorprone:error_prone_annotations](https://errorprone.info/error_prone_annotations)
  * Guava InternalFutureFailureAccess and InternalFutures - [com.google.guava:failureaccess](https://github.com/google/guava/failureaccess)
  * Guava InternalFutureFailureAccess and InternalFutures - [com.google.guava:failureaccess](https://github.com/google/guava/failureaccess)
  * Guava: Google Core Libraries for Java - [com.google.guava:guava](https://github.com/google/guava)
