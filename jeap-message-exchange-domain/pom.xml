@@ -7,7 +7,7 @@
     <parent>
         <groupId>ch.admin.bit.jeap</groupId>
         <artifactId>jeap-message-exchange-service</artifactId>
-        <version>16.2.0-SNAPSHOT</version>
+        <version>16.2.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>jeap-message-exchange-domain</artifactId>
@@ -54,12 +54,10 @@
         <dependency>
             <groupId>net.javacrumbs.shedlock</groupId>
             <artifactId>shedlock-spring</artifactId>
-            <version>${shedlock.version}</version>
         </dependency>
         <dependency>
             <groupId>net.javacrumbs.shedlock</groupId>
             <artifactId>shedlock-provider-jdbc-template</artifactId>
-            <version>${shedlock.version}</version>
         </dependency>
 
         <!-- test -->

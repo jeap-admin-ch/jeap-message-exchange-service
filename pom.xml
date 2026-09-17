@@ -35,19 +35,14 @@
 
     <artifactId>jeap-message-exchange-service</artifactId>
     <name>${project.groupId}:${project.artifactId}</name>
-    <version>16.2.0-SNAPSHOT</version>
+    <version>16.2.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
-        <json-schema-validator.version>3.0.7</json-schema-validator.version>
-        <testcontainers.junit-jupiter.version>2.0.5</testcontainers.junit-jupiter.version>
         <netty.version>4.2.18.Final</netty.version>
         <maven.javadoc.skip>false</maven.javadoc.skip>
         <sonar.coverage.exclusions>**/Pacticipants.java,**/PactProviderTestBase.java</sonar.coverage.exclusions>
         <aalto-xml.version>1.4.0</aalto-xml.version>
-        <commons-io.version>2.22.0</commons-io.version>
-        <wiremock-spring-boot.version>4.2.3</wiremock-spring-boot.version>
-        <testcontainers-floci.version>2.16.1</testcontainers-floci.version>
     </properties>
 
     <modules>
@@ -78,66 +73,49 @@
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-malware-adapter-api</artifactId>
-                <version>16.2.0-SNAPSHOT</version>
+                <version>16.2.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-domain</artifactId>
-                <version>16.2.0-SNAPSHOT</version>
+                <version>16.2.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-persistence</artifactId>
-                <version>16.2.0-SNAPSHOT</version>
+                <version>16.2.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-objectstorage</artifactId>
-                <version>16.2.0-SNAPSHOT</version>
+                <version>16.2.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-kafka</artifactId>
-                <version>16.2.0-SNAPSHOT</version>
+                <version>16.2.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-metrics</artifactId>
-                <version>16.2.0-SNAPSHOT</version>
+                <version>16.2.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-web</artifactId>
-                <version>16.2.0-SNAPSHOT</version>
+                <version>16.2.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-test</artifactId>
-                <version>16.2.0-SNAPSHOT</version>
+                <version>16.2.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>ch.admin.bit.jeap</groupId>
                 <artifactId>jeap-message-exchange-adapter-malware-aws-s3</artifactId>
-                <version>16.2.0-SNAPSHOT</version>
+                <version>16.2.1-SNAPSHOT</version>
             </dependency>
 
-            <dependency>
-                <groupId>commons-io</groupId>
-                <artifactId>commons-io</artifactId>
-                <version>${commons-io.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.wiremock.integrations</groupId>
-                <artifactId>wiremock-spring-boot-standalone</artifactId>
-                <version>${wiremock-spring-boot.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>io.floci</groupId>
-                <artifactId>testcontainers-floci</artifactId>
-                <version>${testcontainers-floci.version}</version>
-                <scope>test</scope>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 

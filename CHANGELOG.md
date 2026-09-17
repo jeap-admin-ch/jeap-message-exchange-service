@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [16.2.1] - 2026-09-17
+
+### Removed
+- Removed version management for `commons-io`, `wiremock-spring-boot-standalone` and `testcontainers-floci` from the root pom: the same versions are already managed by `jeap-internal-spring-boot-parent`.
+- Removed the `json-schema-validator.version` property and the explicit version on `com.networknt:json-schema-validator`, which resolved to the same 3.0.7 the parent manages. The property also forced the unrelated `com.github.java-json-tools:json-schema-validator` to a non-existent 3.0.7.
+- Removed the unused `testcontainers.junit-jupiter.version` property.
+- Removed the explicit versions on shedlock, `rest-assured:spring-mock-mvc` and `jeap-spring-boot-tx` in the module poms: all used the parent's own properties for artifacts the parent already manages.
+
 ## [16.2.0] - 2026-09-16
 
 ### Dependencies
