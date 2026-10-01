@@ -141,6 +141,12 @@
             <plugin>
                 <groupId>org.honton.chas</groupId>
                 <artifactId>license-maven-plugin</artifactId>
+                <configuration>
+                    <excludes combine.children="append">
+                        <!-- Workaround: duplicate assertj-core entries in the AWS SQS POM. Remove once fixed upstream. -->
+                        <exclude>software.amazon.awssdk:sqs</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
             <!-- Generate third-party license list -->
             <plugin>
