@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [16.14.0] - 2026-10-27
+
+### Dependencies
+- **io.awspring.cloud:spring-cloud-aws-dependencies**: 4.2.0 → 4.2.1 (patch)
+- **ch.admin.bit.jeap:jeap-spring-boot-parent**: 41.23.0 → 41.25.0 (minor)
+
 ## [16.13.0] - 2026-10-21
 
 ### Dependencies
