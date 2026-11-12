@@ -243,6 +243,9 @@ For compatibility with B2B Hub clients, trailing slashes in resource paths are r
 | `406 Not Acceptable` | `Content-Type`/`Accept` does not match the configured media types or the stored content type |
 | `409 Conflict` | Upload reusing an existing `messageId` with different content |
 
+Other errors, such as unexpected server errors (`500`), are answered with a generic body (`timestamp`, `status`,
+`error`) that contains neither the exception message nor the request path. The details are in the service log.
+
 ## Authorization
 
 Requests are authorized with jEAP semantic roles on two resources: `b2b-message-in` (partner to application)

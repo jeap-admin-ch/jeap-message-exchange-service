@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [16.18.1] - 2026-11-12
+
+### Fixed
+- Error responses rendered by the Spring Boot error controller (e.g. unexpected server errors) no longer contain the
+  exception message, binding errors or the request path. The defaults spring.web.error.include-message=always and
+  spring.web.error.include-binding-errors=always were removed and spring.web.error.include-path=never was added, as
+  exception messages can reveal internal details such as upstream hosts. The exception is still logged. The responses
+  of the documented 4xx status codes are unchanged.
+
 ## [16.18.0] - 2026-11-11
 
 ### Dependencies
